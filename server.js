@@ -72,6 +72,9 @@ app.get('/api/document', (req, res) => {
         anchor: t.anchor,
         orphaned: t.orphaned,
         messages: t.messages,
+        resolved: t.resolved || false,
+        resolvedAt: t.resolvedAt || null,
+        resolvedComment: t.resolvedComment || null,
       })),
     });
   } catch (err) {
@@ -122,6 +125,21 @@ app.post('/api/thread/:id/reply', (req, res) => {
   saveThreads(threads);
 
   res.json({ success: true, message: msg });
+});
+
+// POST /api/thread/:id/resolve
+app.post('/api/thread/:id/resolve', (req, res) => {
+  const { id } = req.params;
+  const { comment } = req.body;
+  const threads = loadThreads();
+  const thread = threads.find(t => t.id === id);
+  if (!thread) return res.status(404).json({ error: 'Thread not found' });
+
+  thread.resolved = true;
+  thread.resolvedAt = new Date().toISOString();
+  thread.resolvedComment = comment || null;
+  saveThreads(threads);
+  res.json({ success: true });
 });
 
 // DELETE /api/thread/:id — removes an entire thread

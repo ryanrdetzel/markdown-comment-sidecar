@@ -372,6 +372,189 @@
     .btn-reply:hover { background: #6d28d9; }
     .btn-reply:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    /* Sidebar tabs */
+    .sidebar-tabs {
+      display: flex;
+      flex: 1;
+    }
+
+    .sidebar-tab {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #9ca3af;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .sidebar-tab.active { color: #7c3aed; border-bottom-color: #7c3aed; }
+    .sidebar-tab:hover:not(.active) { color: #6b7280; }
+
+    .tab-count {
+      background: #e5e7eb;
+      color: #374151;
+      border-radius: 10px;
+      padding: 1px 6px;
+      font-size: 10px;
+      margin-left: 4px;
+    }
+
+    .sidebar-tab.active .tab-count { background: #ede9fe; color: #6d28d9; }
+
+    /* Resolved highlight in document */
+    mark.cmt-highlight.resolved {
+      background: #dcfce7;
+      border-bottom-color: #16a34a;
+    }
+    mark.cmt-highlight.resolved:hover { background: #bbf7d0; }
+    mark.cmt-highlight.resolved.active { background: #bbf7d0; box-shadow: 0 0 0 2px #16a34a; }
+
+    /* Resolved thread card */
+    .comment-card.resolved { border-color: #d1fae5; background: #f0fdf4; }
+    .comment-card.resolved:hover { border-color: #6ee7b7; }
+
+    .resolved-badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: #16a34a;
+      background: #dcfce7;
+      border-radius: 10px;
+      padding: 1px 7px;
+      margin-left: auto;
+      margin-right: 6px;
+      white-space: nowrap;
+    }
+
+    /* Resolved banner inside thread view */
+    .resolved-banner {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin: 0 12px 8px;
+      font-size: 12px;
+      color: #15803d;
+    }
+
+    .resolved-banner strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+
+    /* Split resolve button */
+    .resolve-btn-group {
+      position: relative;
+      display: flex;
+    }
+
+    .btn-resolve-main {
+      background: #f0fdf4;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+      border-right: none;
+      padding: 6px 11px;
+      border-radius: 6px 0 0 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .btn-resolve-main:hover { background: #dcfce7; }
+
+    .btn-resolve-arrow {
+      background: #f0fdf4;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+      padding: 6px 7px;
+      border-radius: 0 6px 6px 0;
+      cursor: pointer;
+      font-size: 10px;
+      line-height: 1;
+    }
+
+    .btn-resolve-arrow:hover { background: #dcfce7; }
+
+    .resolve-dropdown {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      right: 0;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      overflow: hidden;
+      z-index: 50;
+      min-width: 200px;
+    }
+
+    .resolve-dropdown button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 9px 14px;
+      font-size: 13px;
+      color: #374151;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .resolve-dropdown button:hover { background: #f3f4f6; }
+
+    /* Resolve-with-comment inline form */
+    .resolve-form {
+      border-top: 1px dashed #bbf7d0;
+      padding-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .resolve-form textarea {
+      width: 100%;
+      border: 1px solid #bbf7d0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      min-height: 60px;
+      background: #f0fdf4;
+    }
+
+    .resolve-form textarea:focus { border-color: #16a34a; box-shadow: 0 0 0 2px #dcfce7; }
+
+    .resolve-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+    .btn-resolve-cancel {
+      background: none;
+      border: 1px solid #d1d5db;
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-resolve-cancel:hover { background: #f3f4f6; }
+
+    .btn-resolve-confirm {
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-resolve-confirm:hover { background: #15803d; }
+
     /* Add comment modal */
     #comment-modal {
       position: fixed;
@@ -478,10 +661,7 @@
       </div>
       <div class="reply-area" id="reply-area" style="display:none">
         <textarea id="reply-input" placeholder="Reply to this thread..." rows="3"></textarea>
-        <div class="reply-actions">
-          <button class="btn-delete-thread" id="btn-delete-thread">Delete thread</button>
-          <button class="btn-reply" id="btn-reply">Reply</button>
-        </div>
+        <div class="reply-actions"></div>
       </div>
     </aside>
   </div>
