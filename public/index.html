@@ -437,15 +437,38 @@
       opacity: 0.6;
     }
 
+    /* Message count — sits just left of the bar, aligned to the first line */
+    .cmt-block-highlight::after {
+      content: attr(data-cmt-count);
+      position: absolute;
+      left: -36px;
+      top: 0;
+      width: 18px;
+      text-align: right;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.75;
+      color: var(--mark-border);
+      pointer-events: none;
+      opacity: 0.55;
+    }
+
     .cmt-block-highlight:hover { background: rgba(234, 179, 8, 0.08); }
-    .cmt-block-highlight:hover::before { opacity: 1; }
+    .cmt-block-highlight:hover::before, .cmt-block-highlight:hover::after { opacity: 1; }
 
     .cmt-block-highlight.cmt-block-active { background: rgba(234, 179, 8, 0.13); }
     .cmt-block-highlight.cmt-block-active::before { opacity: 1; width: 3px; }
+    .cmt-block-highlight.cmt-block-active::after { opacity: 1; }
 
     .cmt-block-highlight.cmt-block-resolved::before { background: #16a34a; }
+    .cmt-block-highlight.cmt-block-resolved::after { color: #16a34a; }
     .cmt-block-highlight.cmt-block-resolved:hover { background: rgba(22, 163, 74, 0.07); }
     .cmt-block-highlight.cmt-block-resolved.cmt-block-active { background: rgba(22, 163, 74, 0.11); }
+
+    /* For list items, the default left:-16px bar lands on the bullet marker.
+       Shift both the bar and count badge further left to clear it. */
+    li.cmt-block-highlight::before { left: -26px; }
+    li.cmt-block-highlight::after  { left: -46px; }
 
     /* Add comment button */
     #add-comment-btn {
@@ -927,6 +950,56 @@
     }
 
     .btn-resolve-confirm:hover { background: #15803d; }
+
+    /* Block multi-thread view */
+    .block-thread-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .block-thread-section .thread-anchor {
+      margin: 12px 12px 6px;
+    }
+
+    .block-thread-section .message-bubble {
+      margin: 0 12px 6px;
+    }
+
+    .block-thread-sep {
+      border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+
+    .block-thread-reply {
+      padding: 6px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .block-thread-reply textarea {
+      width: 100%;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+      background: var(--doc-bg);
+      color: var(--doc-color);
+    }
+
+    .block-thread-reply textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+
+    .block-thread-reply-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
 
     /* Add comment modal */
     #comment-modal, #name-modal {
