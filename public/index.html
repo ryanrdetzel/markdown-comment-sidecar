@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Comment Sidecar</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    header span { opacity: 0.5; font-weight: 400; }
+
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Document pane */
+    .doc-pane {
+      flex: 1;
+      overflow-y: auto;
+      padding: 40px 60px;
+      background: #fff;
+      position: relative;
+    }
+
+    .doc-content {
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.75;
+    }
+
+    .doc-content h1 { font-size: 2em; margin-bottom: 0.5em; color: #111; }
+    .doc-content h2 { font-size: 1.4em; margin: 1.5em 0 0.5em; color: #222; }
+    .doc-content p { margin-bottom: 1em; }
+
+    mark.cmt-highlight {
+      background: #fef08a;
+      border-bottom: 2px solid #eab308;
+      cursor: pointer;
+      border-radius: 2px;
+      padding: 1px 0;
+      transition: background 0.15s;
+    }
+
+    mark.cmt-highlight:hover { background: #fde047; }
+    mark.cmt-highlight.active { background: #fde047; box-shadow: 0 0 0 2px #eab308; }
+    mark.cmt-highlight.orphaned { background: #fee2e2; border-bottom-color: #ef4444; }
+
+    /* Add comment button */
+    #add-comment-btn {
+      position: fixed;
+      display: none;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 100;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    #add-comment-btn:hover { background: #16213e; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 320px;
+      background: #fafafa;
+      border-left: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #6b7280;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #comment-count {
+      background: #e5e7eb;
+      color: #374151;
+      border-radius: 10px;
+      padding: 1px 8px;
+      font-size: 11px;
+    }
+
+    .comments-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .comment-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .comment-card:hover { border-color: #a78bfa; }
+    .comment-card.active { border-color: #7c3aed; box-shadow: 0 0 0 2px #ede9fe; }
+    .comment-card.orphaned { border-color: #fca5a5; background: #fff7f7; }
+
+    .comment-anchor {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 6px;
+      font-style: italic;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .comment-anchor.orphaned-label {
+      color: #ef4444;
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    .comment-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #374151;
+    }
+
+    .comment-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .comment-date {
+      font-size: 10px;
+      color: #d1d5db;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #d1d5db;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      border-radius: 3px;
+      line-height: 1;
+    }
+
+    .delete-btn:hover { color: #ef4444; background: #fee2e2; }
+
+    .empty-state {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 13px;
+      padding: 40px 20px;
+    }
+
+    /* Add comment modal */
+    #comment-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    #comment-modal.open { display: flex; }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 10px;
+      padding: 24px;
+      width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-box h3 { font-size: 15px; margin-bottom: 8px; }
+
+    .modal-selected-text {
+      background: #fef9c3;
+      border-left: 3px solid #eab308;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #713f12;
+      border-radius: 3px;
+      margin-bottom: 14px;
+      white-space: pre-wrap;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    .modal-box textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 13px;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .modal-box textarea:focus { border-color: #7c3aed; box-shadow: 0 0 0 2px #ede9fe; }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-cancel {
+      background: none;
+      border: 1px solid #d1d5db;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .btn-cancel:hover { background: #f3f4f6; }
+
+    .btn-submit {
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn-submit:hover { background: #6d28d9; }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header>
+    Markdown Comment Sidecar <span>POC</span>
+  </header>
+
+  <div class="layout">
+    <div class="doc-pane">
+      <div class="doc-content" id="doc-content">Loading...</div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        Comments <span id="comment-count">0</span>
+      </div>
+      <div class="comments-list" id="comments-list">
+        <div class="empty-state">Select text in the document to add a comment.</div>
+      </div>
+    </aside>
+  </div>
+
+  <button id="add-comment-btn">+ Add Comment</button>
+
+  <div id="comment-modal">
+    <div class="modal-box">
+      <h3>Add Comment</h3>
+      <div class="modal-selected-text" id="modal-selected-text"></div>
+      <textarea id="comment-input" placeholder="Write your comment..." rows="4"></textarea>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="modal-cancel">Cancel</button>
+        <button class="btn-submit" id="modal-submit">Add Comment</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
