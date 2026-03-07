@@ -691,7 +691,7 @@ document.addEventListener('mouseup', (e) => {
 
   const rect = range.getBoundingClientRect();
   addBtn.style.display = 'block';
-  addBtn.style.left = `${rect.left + window.scrollX}px`;
+  addBtn.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
   addBtn.style.top = `${rect.top + window.scrollY - 36}px`;
 });
 
