@@ -134,11 +134,20 @@ function generateHtml({ title, documentId, serverUrl, markdown, html, appJs, sty
 <body>
   <header>
     ${escapeHtml(title)} <span>· comments</span>
-    <div class="view-toggle">
-      <button id="btn-preview" class="active">Preview</button>
-      <button id="btn-markdown">Markdown</button>
+    <div class="header-controls">
+      <select id="theme-select" class="theme-select" title="Change theme">
+        <option value="classic">Classic</option>
+        <option value="dark">Dark</option>
+        <option value="sepia">Sepia</option>
+        <option value="ocean">Ocean</option>
+        <option value="forest">Forest</option>
+      </select>
+      <div class="view-toggle">
+        <button id="btn-preview" class="active">Preview</button>
+        <button id="btn-markdown">Markdown</button>
+      </div>
+      <button class="btn-sidebar-toggle" id="btn-sidebar-toggle" title="Hide sidebar">&#x00BB;</button>
     </div>
-    <button class="btn-sidebar-toggle" id="btn-sidebar-toggle" title="Hide sidebar">&#x00BB;</button>
   </header>
 
   <div class="author-bar">

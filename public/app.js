@@ -14,6 +14,7 @@ function apiUrl(path) {
 // ─── Author / identity ────────────────────────────────────────────────────────
 
 const AUTHOR_KEY = 'sidecar_author';
+const THEME_KEY = 'sidecar_theme';
 
 function getAuthor() {
   return localStorage.getItem(AUTHOR_KEY) || null;
@@ -21,6 +22,21 @@ function getAuthor() {
 
 function setAuthor(name) {
   localStorage.setItem(AUTHOR_KEY, name.trim());
+}
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function initTheme() {
+  const themeSelect = document.getElementById('theme-select');
+  const saved = localStorage.getItem(THEME_KEY) || 'classic';
+  themeSelect.value = saved;
+  applyTheme(saved);
+  themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -855,6 +871,7 @@ document.addEventListener('mouseup', () => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
+initTheme();
 initSidebar();
 updateAuthorDisplay();
 load();
