@@ -17,14 +17,21 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// Detect old schema and migrate if needed (element-level anchoring replaces text-offset anchoring)
+try {
+  db.prepare('SELECT anchor_element_type FROM threads LIMIT 1').get();
+} catch {
+  db.exec('DROP TABLE IF EXISTS messages; DROP TABLE IF EXISTS threads;');
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS threads (
     id TEXT PRIMARY KEY,
     document_id TEXT NOT NULL,
-    anchor_context TEXT NOT NULL,
-    anchor_prefix TEXT NOT NULL DEFAULT '',
-    anchor_suffix TEXT NOT NULL DEFAULT '',
-    anchor_offset_guess INTEGER NOT NULL DEFAULT 0,
+    anchor_element_type TEXT NOT NULL DEFAULT 'p',
+    anchor_element_index INTEGER NOT NULL DEFAULT 0,
+    anchor_element_text TEXT NOT NULL DEFAULT '',
+    anchor_selected_text TEXT,
     resolved INTEGER NOT NULL DEFAULT 0,
     resolved_at TEXT,
     resolved_comment TEXT,
@@ -58,8 +65,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 function getThreadsForDocument(documentId) {
   const threads = db.prepare(`
-    SELECT id, document_id, anchor_context, anchor_prefix, anchor_suffix,
-           anchor_offset_guess, resolved, resolved_at, resolved_comment, created_at
+    SELECT id, document_id, anchor_element_type, anchor_element_index,
+           anchor_element_text, anchor_selected_text,
+           resolved, resolved_at, resolved_comment, created_at
     FROM threads WHERE document_id = ? ORDER BY created_at ASC
   `).all(documentId);
 
@@ -73,10 +81,10 @@ function getThreadsForDocument(documentId) {
       id: t.id,
       documentId: t.document_id,
       anchor: {
-        context: t.anchor_context,
-        prefix: t.anchor_prefix,
-        suffix: t.anchor_suffix,
-        offset_guess: t.anchor_offset_guess,
+        elementType: t.anchor_element_type,
+        elementIndex: t.anchor_element_index,
+        elementText: t.anchor_element_text,
+        selectedText: t.anchor_selected_text,
       },
       messages,
       resolved: t.resolved === 1,
@@ -90,9 +98,6 @@ function getThreadsForDocument(documentId) {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 // GET /api/document?documentId=xxx
-// For local dev: returns rendered HTML + raw markdown for the sample file.
-// In production static-site mode, clients fetch threads separately and
-// already have the markdown embedded in the page — this endpoint isn't needed.
 app.get('/api/document', (req, res) => {
   const documentId = req.query.documentId || 'local';
   const mdPath = path.join(__dirname, 'sample.md');
@@ -109,8 +114,6 @@ app.get('/api/document', (req, res) => {
 });
 
 // GET /api/threads?documentId=xxx
-// Pure thread fetch — used by static sites. Returns raw threads, no re-anchoring.
-// The client does re-anchoring against its local markdown.
 app.get('/api/threads', (req, res) => {
   const { documentId } = req.query;
   if (!documentId) return res.status(400).json({ error: 'documentId is required' });
@@ -124,27 +127,23 @@ app.get('/api/threads', (req, res) => {
 });
 
 // POST /api/comment — creates a new thread
-// Body: { documentId, text, author, selectedText, offset, prefix, suffix }
+// Body: { documentId, text, author, elementType, elementIndex, elementText, selectedText }
 app.post('/api/comment', (req, res) => {
-  const { documentId, text, author, selectedText, offset, prefix, suffix } = req.body;
+  const { documentId, text, author, elementType, elementIndex, elementText, selectedText } = req.body;
 
-  if (!documentId || !text || !selectedText || offset == null) {
-    return res.status(400).json({ error: 'documentId, text, selectedText, and offset are required' });
+  if (!documentId || !text || !elementType || elementIndex == null) {
+    return res.status(400).json({ error: 'documentId, text, elementType, and elementIndex are required' });
   }
 
   const now = new Date().toISOString();
   const threadId = `thread_${Date.now()}`;
   const messageId = `${threadId}_m0`;
 
-  // If prefix/suffix weren't computed client-side, they'll be empty strings
-  const anchorPrefix = prefix || '';
-  const anchorSuffix = suffix || '';
-
   db.prepare(`
-    INSERT INTO threads (id, document_id, anchor_context, anchor_prefix, anchor_suffix,
-                         anchor_offset_guess, resolved, created_at)
+    INSERT INTO threads (id, document_id, anchor_element_type, anchor_element_index,
+                         anchor_element_text, anchor_selected_text, resolved, created_at)
     VALUES (?, ?, ?, ?, ?, ?, 0, ?)
-  `).run(threadId, documentId, selectedText, anchorPrefix, anchorSuffix, offset, now);
+  `).run(threadId, documentId, elementType, elementIndex, elementText || '', selectedText || null, now);
 
   db.prepare(`
     INSERT INTO messages (id, thread_id, text, author, created_at)

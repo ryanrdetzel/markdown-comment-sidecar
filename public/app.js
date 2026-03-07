@@ -45,10 +45,10 @@ let state = {
   markdown: '',
   html: '',
   threads: [],
-  selection: null,
-  view: 'preview',       // 'preview' | 'markdown'
-  sidebarMode: 'list',   // 'list' | 'thread'
-  sidebarTab: 'active',  // 'active' | 'resolved'
+  selection: null,     // { elementType, elementIndex, elementText, selectedText }
+  view: 'preview',     // 'preview' | 'markdown'
+  sidebarMode: 'list', // 'list' | 'thread'
+  sidebarTab: 'active',// 'active' | 'resolved'
   activeThreadId: null,
 };
 
@@ -113,91 +113,134 @@ nameInput.addEventListener('keydown', e => {
 
 nameModal.addEventListener('click', e => { if (e.target === nameModal) closeNameModal(); });
 
-// ─── Re-anchoring (client-side) ───────────────────────────────────────────────
-// The server stores raw anchor data; the client resolves current positions
-// against the markdown it has in memory.
+// ─── Element-level anchoring helpers ──────────────────────────────────────────
 
-function reAnchor(thread) {
-  const { anchor } = thread;
-  const markdown = state.markdown;
+const BLOCK_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'PRE', 'BLOCKQUOTE', 'TD', 'TH']);
 
-  // Try near the original offset first (handles minor edits),
-  // then fall back to a full scan.
-  const start = Math.max(0, anchor.offset_guess - anchor.context.length);
-  let idx = markdown.indexOf(anchor.context, start);
-  if (idx === -1) idx = markdown.indexOf(anchor.context);
-
-  if (idx !== -1) return { ...thread, currentOffset: idx, orphaned: false };
-
-  // Markdown search failed — anchor context may be rendered text with formatting stripped
-  // (bold, italic, list prefixes, etc.). Fall back to the rendered DOM so the thread
-  // still shows in preview even though markdown-view highlight won't work.
-  if (findTextInDOM(docContent, anchor.context)) {
-    return { ...thread, currentOffset: -1, orphaned: false };
+// Walk up the DOM from a node to find the nearest block-level element.
+function getBlockElement(node) {
+  let el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  while (el && el !== docContent) {
+    if (BLOCK_TAGS.has(el.tagName)) return el;
+    el = el.parentElement;
   }
-
-  return { ...thread, currentOffset: -1, orphaned: true };
+  return null;
 }
 
-// ─── Offset mapping ───────────────────────────────────────────────────────────
+// 0-based index of el among all elements of the same tag in docContent.
+function getElementIndex(el) {
+  return Array.from(docContent.querySelectorAll(el.tagName.toLowerCase())).indexOf(el);
+}
 
-function findTextInDOM(root, searchText) {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const nodes = [];
-  let node;
-  while ((node = walker.nextNode())) nodes.push(node);
+// Find a block element by stored anchor. Tries by index first, falls back to text match.
+function findElementByAnchor(anchor) {
+  const els = docContent.querySelectorAll(anchor.elementType);
+  if (anchor.elementIndex < els.length) return els[anchor.elementIndex];
+  // Fallback: match by first 30 chars of stored element text
+  const search = (anchor.elementText || '').slice(0, 30);
+  if (!search) return null;
+  for (const el of els) {
+    if (el.textContent.trim().startsWith(search)) return el;
+  }
+  return null;
+}
 
-  let combined = '';
-  const positions = [];
-  for (const n of nodes) {
-    positions.push({ node: n, start: combined.length, length: n.nodeValue.length });
-    combined += n.nodeValue;
+// Parse the raw markdown into a typed block index: [{ type, index, start, end }].
+// Types map to HTML element tag names (p, h1-h6, pre, li, blockquote).
+// Index is the 0-based count among blocks of the same type, matching getElementIndex().
+function buildMarkdownBlockIndex(markdown) {
+  const blocks = [];
+  const counters = {};
+  const lines = markdown.split('\n');
+  let i = 0;
+  let charPos = 0;
+
+  function nextIndex(type) {
+    counters[type] = (counters[type] || 0);
+    return counters[type]++;
   }
 
-  const idx = combined.indexOf(searchText);
-  if (idx === -1) return null;
+  while (i < lines.length) {
+    const line = lines[i];
+    const lineLen = line.length + 1;
 
-  const endIdx = idx + searchText.length;
+    // Blank line
+    if (line.trim() === '') { charPos += lineLen; i++; continue; }
 
-  function nodeAt(offset, allowAtEnd = false) {
-    for (const p of positions) {
-      const inRange = allowAtEnd
-        ? (offset >= p.start && offset <= p.start + p.length)
-        : (offset >= p.start && offset < p.start + p.length);
-      if (inRange) return { node: p.node, offset: offset - p.start };
+    // Thematic break
+    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { charPos += lineLen; i++; continue; }
+
+    // ATX heading (# through ######)
+    const headingMatch = line.match(/^(#{1,6})\s/);
+    if (headingMatch) {
+      const type = `h${headingMatch[1].length}`;
+      blocks.push({ type, index: nextIndex(type), start: charPos, end: charPos + line.length });
+      charPos += lineLen; i++;
+      continue;
     }
-    const last = positions[positions.length - 1];
-    return { node: last.node, offset: last.length };
+
+    // Fenced code block (``` or ~~~)
+    const fenceMatch = line.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const fence = fenceMatch[1];
+      const start = charPos;
+      charPos += lineLen; i++;
+      while (i < lines.length && !lines[i].startsWith(fence)) { charPos += lines[i].length + 1; i++; }
+      if (i < lines.length) { charPos += lines[i].length + 1; i++; } // closing fence
+      blocks.push({ type: 'pre', index: nextIndex('pre'), start, end: charPos });
+      continue;
+    }
+
+    // Blockquote
+    if (line.startsWith('>')) {
+      const start = charPos;
+      while (i < lines.length && lines[i].startsWith('>')) { charPos += lines[i].length + 1; i++; }
+      blocks.push({ type: 'blockquote', index: nextIndex('blockquote'), start, end: charPos });
+      continue;
+    }
+
+    // List item (-, *, +, or 1.)
+    if (/^(\*|-|\+|\d+\.)\s/.test(line)) {
+      const start = charPos;
+      charPos += lineLen; i++;
+      while (i < lines.length && /^\s+\S/.test(lines[i])) { charPos += lines[i].length + 1; i++; }
+      blocks.push({ type: 'li', index: nextIndex('li'), start, end: charPos });
+      continue;
+    }
+
+    // Table row (skip — td/th mapping is too complex for this POC)
+    if (line.includes('|') && line.trim().startsWith('|')) {
+      while (i < lines.length && lines[i].trim() !== '' && lines[i].includes('|')) {
+        charPos += lines[i].length + 1; i++;
+      }
+      continue;
+    }
+
+    // Paragraph: consume until a blank line or block-level marker
+    const start = charPos;
+    while (
+      i < lines.length &&
+      lines[i].trim() !== '' &&
+      !lines[i].match(/^#{1,6}\s|^(`{3,}|~{3,})|^>|^(\*|-|\+|\d+\.)\s|^(-{3,}|\*{3,}|_{3,})\s*$/)
+    ) {
+      charPos += lines[i].length + 1; i++;
+    }
+    if (charPos > start) {
+      blocks.push({ type: 'p', index: nextIndex('p'), start, end: charPos });
+    }
   }
 
-  const startPos = nodeAt(idx);
-  const endPos = nodeAt(endIdx, true);
-  return {
-    startNode: startPos.node,
-    startOffset: startPos.offset,
-    endNode: endPos.node,
-    endOffset: endPos.offset,
-  };
+  return blocks;
 }
 
-function wrapRange(startNode, startOffset, endNode, endOffset, threadId, orphaned, resolved = false) {
-  const range = document.createRange();
-  range.setStart(startNode, startOffset);
-  range.setEnd(endNode, endOffset);
-
-  const mark = document.createElement('mark');
-  mark.className = 'cmt-highlight' + (orphaned ? ' orphaned' : '') + (resolved ? ' resolved' : '');
-  mark.dataset.cmtId = threadId;
-  mark.addEventListener('click', () => openThread(threadId));
-
-  try {
-    range.surroundContents(mark);
-  } catch {
-    const fragment = range.extractContents();
-    mark.appendChild(fragment);
-    range.insertNode(mark);
-  }
+// Find the markdown source range for a thread's anchor using type+index (no text search).
+function findMarkdownBlockRange(anchor) {
+  const blocks = buildMarkdownBlockIndex(state.markdown);
+  const block = blocks.find(b => b.type === anchor.elementType && b.index === anchor.elementIndex);
+  return block ? { start: block.start, end: block.end } : null;
 }
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
 
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -206,14 +249,10 @@ function escapeHtml(str) {
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
 async function load() {
-  // For static sites, HTML is pre-rendered and markdown is embedded in the page.
-  // For local dev, we fetch both from the server.
   if (window.SIDECAR_CONFIG && window.SIDECAR_CONFIG.markdown) {
-    // Static site mode: markdown embedded at build time
     state.markdown = window.SIDECAR_CONFIG.markdown;
     state.html = window.SIDECAR_CONFIG.html || '';
   } else {
-    // Local dev mode: fetch document from server
     const res = await fetch(apiUrl(`/api/document?documentId=${encodeURIComponent(config.documentId)}`));
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load document');
@@ -221,17 +260,14 @@ async function load() {
     state.html = data.html;
   }
 
-  // Render document immediately so the page isn't stuck on "Loading..."
-  // even if the thread server is unreachable.
   renderView();
   renderSidebar();
 
-  // Fetch threads separately — fail gracefully if server is down or unreachable.
   try {
     const threadsRes = await fetch(apiUrl(`/api/threads?documentId=${encodeURIComponent(config.documentId)}`));
     const threadsData = await threadsRes.json();
     if (!threadsRes.ok) throw new Error(threadsData.error || 'Failed to load threads');
-    state.threads = threadsData.threads.map(reAnchor);
+    state.threads = threadsData.threads;
     renderView();
     renderSidebar();
   } catch (err) {
@@ -253,27 +289,38 @@ function renderPreviewView() {
   addBtn.style.display = 'none';
 }
 
+// Apply block-level highlights to the rendered preview.
+// Adds CSS classes to the block element — no DOM Range manipulation needed.
 function highlightThreads() {
-  docContent.querySelectorAll('mark.cmt-highlight').forEach(m => {
-    const parent = m.parentNode;
-    while (m.firstChild) parent.insertBefore(m.firstChild, m);
-    parent.removeChild(m);
+  // Clear previous highlights
+  docContent.querySelectorAll('.cmt-block-highlight').forEach(el => {
+    el.classList.remove('cmt-block-highlight', 'cmt-block-active', 'cmt-block-resolved');
+    delete el.dataset.cmtIds;
+    if (el._cmtHandler) {
+      el.removeEventListener('click', el._cmtHandler);
+      delete el._cmtHandler;
+    }
   });
-  docContent.normalize();
 
   for (const t of state.threads) {
-    if (t.orphaned) continue;
     if (t.resolved && t.id !== state.activeThreadId) continue;
-    const result = findTextInDOM(docContent, t.anchor.context);
-    if (result) {
-      wrapRange(result.startNode, result.startOffset, result.endNode, result.endOffset, t.id, false, t.resolved);
-    }
-  }
+    const el = findElementByAnchor(t.anchor);
+    if (!el) { t.orphaned = true; continue; }
+    t.orphaned = false;
 
-  if (state.activeThreadId) {
-    document.querySelectorAll('mark.cmt-highlight').forEach(m => {
-      m.classList.toggle('active', m.dataset.cmtId === state.activeThreadId);
-    });
+    // Track multiple thread IDs on the same element (e.g. two comments on same paragraph)
+    const ids = el.dataset.cmtIds ? el.dataset.cmtIds.split(',') : [];
+    if (!ids.includes(t.id)) ids.push(t.id);
+    el.dataset.cmtIds = ids.join(',');
+
+    el.classList.add('cmt-block-highlight');
+    if (t.resolved) el.classList.add('cmt-block-resolved');
+    if (t.id === state.activeThreadId) el.classList.add('cmt-block-active');
+
+    if (!el._cmtHandler) {
+      el._cmtHandler = () => openThread(el.dataset.cmtIds.split(',')[0]);
+      el.addEventListener('click', el._cmtHandler);
+    }
   }
 }
 
@@ -281,21 +328,24 @@ function renderMarkdownView() {
   addBtn.style.display = 'none';
 
   const md = state.markdown;
-  const active = state.threads
-    .filter(t => !t.orphaned && t.currentOffset >= 0 && (!t.resolved || t.id === state.activeThreadId))
-    .map(t => ({ start: t.currentOffset, end: t.currentOffset + t.anchor.context.length, id: t.id }))
+  const blocks = state.threads
+    .filter(t => !t.orphaned && (!t.resolved || t.id === state.activeThreadId))
+    .map(t => {
+      const range = findMarkdownBlockRange(t.anchor);
+      return range ? { ...range, id: t.id, resolved: t.resolved } : null;
+    })
+    .filter(Boolean)
     .sort((a, b) => a.start - b.start);
 
   let html = '';
   let pos = 0;
-  for (const t of active) {
-    if (t.start < pos) continue;
-    html += escapeHtml(md.slice(pos, t.start));
-    const thread = state.threads.find(th => th.id === t.id);
-    const isActive = t.id === state.activeThreadId ? ' active' : '';
-    const isResolved = thread && thread.resolved ? ' resolved' : '';
-    html += `<mark class="cmt-highlight${isActive}${isResolved}" data-cmt-id="${t.id}">${escapeHtml(md.slice(t.start, t.end))}</mark>`;
-    pos = t.end;
+  for (const b of blocks) {
+    if (b.start < pos) continue; // skip overlapping ranges
+    html += escapeHtml(md.slice(pos, b.start));
+    const isActive = b.id === state.activeThreadId ? ' active' : '';
+    const isResolved = b.resolved ? ' resolved' : '';
+    html += `<mark class="cmt-highlight${isActive}${isResolved}" data-cmt-id="${b.id}">${escapeHtml(md.slice(b.start, b.end))}</mark>`;
+    pos = b.end;
   }
   html += escapeHtml(md.slice(pos));
 
@@ -364,9 +414,10 @@ function renderThreadList() {
 
     const anchor = document.createElement('div');
     anchor.className = 'comment-anchor' + (thread.orphaned ? ' orphaned-label' : '');
-    const ctx = thread.anchor.context;
+    // Show selected words if available, otherwise fall back to element text
+    const ctx = thread.anchor.selectedText || thread.anchor.elementText || '';
     anchor.textContent = thread.orphaned
-      ? '⚠ Orphaned — anchor text was removed'
+      ? '⚠ Orphaned — element was removed'
       : `"${ctx.slice(0, 55)}${ctx.length > 55 ? '…' : ''}"`;
 
     const firstEl = document.createElement('div');
@@ -429,7 +480,8 @@ function renderThreadView(thread) {
 
   const anchorEl = document.createElement('div');
   anchorEl.className = 'thread-anchor';
-  const ctx = thread.anchor.context;
+  // Show selected words if available, otherwise fall back to element text
+  const ctx = thread.anchor.selectedText || thread.anchor.elementText || '';
   anchorEl.textContent = `"${ctx.slice(0, 80)}${ctx.length > 80 ? '…' : ''}"`;
 
   commentsList.innerHTML = '';
@@ -605,13 +657,25 @@ function openThread(id) {
   if (prevResolved || nextResolved) {
     renderView();
   } else {
-    document.querySelectorAll('mark.cmt-highlight').forEach(m => {
+    // Update active class on preview block highlights
+    docContent.querySelectorAll('.cmt-block-highlight').forEach(el => {
+      const ids = el.dataset.cmtIds ? el.dataset.cmtIds.split(',') : [];
+      el.classList.toggle('cmt-block-active', ids.includes(id));
+    });
+    // Update active class on markdown view marks
+    docContent.querySelectorAll('mark.cmt-highlight').forEach(m => {
       m.classList.toggle('active', m.dataset.cmtId === id);
     });
   }
 
-  const activeMark = document.querySelector(`mark.cmt-highlight[data-cmt-id="${id}"]`);
-  if (activeMark) activeMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Scroll to the highlighted element
+  const thread = state.threads.find(t => t.id === id);
+  if (thread) {
+    const el = state.view === 'preview'
+      ? findElementByAnchor(thread.anchor)
+      : docContent.querySelector(`mark.cmt-highlight[data-cmt-id="${id}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   renderSidebar();
 }
@@ -627,7 +691,8 @@ function closeThread() {
   if (wasResolved) {
     renderView();
   } else {
-    document.querySelectorAll('mark.cmt-highlight').forEach(m => m.classList.remove('active'));
+    docContent.querySelectorAll('.cmt-block-active').forEach(el => el.classList.remove('cmt-block-active'));
+    docContent.querySelectorAll('mark.cmt-highlight.active').forEach(m => m.classList.remove('active'));
   }
 
   renderSidebar();
@@ -679,6 +744,14 @@ async function deleteThread(id) {
 document.addEventListener('mouseup', (e) => {
   if (e.target === addBtn || modal.contains(e.target) || nameModal.contains(e.target)) return;
 
+  // Comment creation is only supported in preview view.
+  // Markdown view is read-only for annotations — switch to preview to comment.
+  if (state.view !== 'preview') {
+    addBtn.style.display = 'none';
+    state.selection = null;
+    return;
+  }
+
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
     addBtn.style.display = 'none';
@@ -686,8 +759,8 @@ document.addEventListener('mouseup', (e) => {
     return;
   }
 
-  const text = sel.toString().trim();
-  if (!text || text.length < 2) {
+  const selectedText = sel.toString().trim();
+  if (!selectedText || selectedText.length < 2) {
     addBtn.style.display = 'none';
     state.selection = null;
     return;
@@ -700,36 +773,20 @@ document.addEventListener('mouseup', (e) => {
     return;
   }
 
-  // Validate the selection exists in the rendered DOM (the same source as sel.toString()).
-  // This is more reliable than searching raw markdown, which has formatting characters
-  // (**, _, >, 1., etc.) that are stripped in the rendered view.
-  //
-  // Cross-block issue: sel.toString() adds \n at block element boundaries (e.g. <p>→<p>),
-  // but text nodes have no such separator. Strip those boundary \n before searching.
-  let anchorText = text;
-  if (!findTextInDOM(docContent, text) && text.includes('\n')) {
-    const stripped = text.replace(/\n/g, '');
-    if (stripped.length >= 2 && findTextInDOM(docContent, stripped)) {
-      anchorText = stripped;
-    } else {
-      addBtn.style.display = 'none';
-      state.selection = null;
-      return;
-    }
-  } else if (!findTextInDOM(docContent, text)) {
+  // Find the block element the selection starts in
+  const blockEl = getBlockElement(range.startContainer);
+  if (!blockEl) {
     addBtn.style.display = 'none';
     state.selection = null;
     return;
   }
 
-  // Best-effort markdown offset for the markdown-view highlight. Falls back to 0
-  // for selections over formatted text where the rendered text isn't in the markdown.
-  const mdOffset = state.markdown.indexOf(anchorText);
-  const CONTEXT_LEN = 20;
-  const prefix = mdOffset !== -1 ? state.markdown.slice(Math.max(0, mdOffset - CONTEXT_LEN), mdOffset) : '';
-  const suffix = mdOffset !== -1 ? state.markdown.slice(mdOffset + anchorText.length, mdOffset + anchorText.length + CONTEXT_LEN) : '';
-
-  state.selection = { text: anchorText, offset: mdOffset !== -1 ? mdOffset : 0, prefix, suffix };
+  state.selection = {
+    elementType: blockEl.tagName.toLowerCase(),
+    elementIndex: getElementIndex(blockEl),
+    elementText: blockEl.textContent.trim().slice(0, 80),
+    selectedText: selectedText.length <= 200 ? selectedText : selectedText.slice(0, 200) + '…',
+  };
 
   const rect = range.getBoundingClientRect();
   addBtn.style.display = 'block';
@@ -741,7 +798,6 @@ addBtn.addEventListener('click', () => {
   if (!state.selection) return;
   addBtn.style.display = 'none';
 
-  // If no author set, prompt for name first, then open comment modal
   if (!getAuthor()) {
     showNameModal(() => openCommentModal());
     return;
@@ -751,7 +807,8 @@ addBtn.addEventListener('click', () => {
 });
 
 function openCommentModal() {
-  modalSelectedText.textContent = state.selection.text;
+  // Show the selected words as context in the modal
+  modalSelectedText.textContent = state.selection.selectedText || state.selection.elementText;
   commentInput.value = '';
   modal.classList.add('open');
   commentInput.focus();
@@ -779,6 +836,7 @@ async function submitComment() {
   if (!text || !state.selection) return;
 
   const author = getAuthor();
+  const { elementType, elementIndex, elementText, selectedText } = state.selection;
 
   modalSubmit.disabled = true;
   try {
@@ -789,10 +847,10 @@ async function submitComment() {
         documentId: config.documentId,
         text,
         author,
-        selectedText: state.selection.text,
-        offset: state.selection.offset,
-        prefix: state.selection.prefix,
-        suffix: state.selection.suffix,
+        elementType,
+        elementIndex,
+        elementText,
+        selectedText,
       }),
     });
     if (!res.ok) throw new Error('Failed to save comment');

@@ -301,10 +301,21 @@
       padding: 0;
     }
 
+    /* Markdown view block highlight (inside <pre>) */
     .md-source mark.cmt-highlight {
+      background: var(--mark-bg);
+      border-bottom: 2px solid var(--mark-border);
+      cursor: pointer;
       border-radius: 2px;
       padding: 1px 0;
+      transition: background 0.15s;
     }
+
+    .md-source mark.cmt-highlight:hover { background: var(--mark-hover-bg); }
+    .md-source mark.cmt-highlight.active { background: var(--mark-hover-bg); box-shadow: 0 0 0 2px var(--mark-active-shadow); }
+    .md-source mark.cmt-highlight.resolved { background: #dcfce7; border-bottom-color: #16a34a; }
+    .md-source mark.cmt-highlight.resolved:hover { background: #bbf7d0; }
+    .md-source mark.cmt-highlight.resolved.active { background: #bbf7d0; box-shadow: 0 0 0 2px #16a34a; }
 
     .layout {
       display: flex;
@@ -325,24 +336,116 @@
       max-width: 680px;
       margin: 0 auto;
       line-height: 1.75;
+      padding-left: 20px; /* gutter for annotation bars */
     }
 
-    .doc-content h1 { font-size: 2em; margin-bottom: 0.5em; color: var(--heading-color); }
-    .doc-content h2 { font-size: 1.4em; margin: 1.5em 0 0.5em; color: var(--heading-color-2); }
-    .doc-content p { margin-bottom: 1em; }
+    /* ── Markdown content styles ─────────────────────────────────────────────── */
 
-    mark.cmt-highlight {
-      background: var(--mark-bg);
-      border-bottom: 2px solid var(--mark-border);
+    .doc-content h1 { font-size: 1.9em; font-weight: 700; margin: 0 0 0.4em; color: var(--heading-color); line-height: 1.2; }
+    .doc-content h2 { font-size: 1.4em; font-weight: 700; margin: 2em 0 0.5em; color: var(--heading-color-2); line-height: 1.3; }
+    .doc-content h3 { font-size: 1.15em; font-weight: 700; margin: 1.6em 0 0.4em; color: var(--heading-color-2); }
+    .doc-content h4 { font-size: 1em; font-weight: 700; margin: 1.4em 0 0.3em; color: var(--heading-color-2); }
+    .doc-content h5, .doc-content h6 { font-size: 0.9em; font-weight: 700; margin: 1.2em 0 0.3em; color: var(--text-muted); }
+
+    .doc-content p { margin: 0 0 1em; }
+    .doc-content p:last-child { margin-bottom: 0; }
+
+    .doc-content ul, .doc-content ol { margin: 0 0 1em 1.5em; }
+    .doc-content li { margin-bottom: 0.25em; }
+    .doc-content li > ul, .doc-content li > ol { margin: 0.25em 0 0.25em 1.25em; }
+
+    .doc-content blockquote {
+      margin: 0 0 1em;
+      padding: 0.5em 0 0.5em 1em;
+      border-left: 3px solid var(--border);
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .doc-content blockquote p { margin-bottom: 0; }
+
+    .doc-content pre {
+      margin: 0 0 1em;
+      padding: 1em 1.25em;
+      background: var(--page-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    .doc-content pre code {
+      font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 0.85em;
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--doc-color);
+    }
+    .doc-content code {
+      font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 0.875em;
+      background: var(--page-bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0.15em 0.4em;
+      color: var(--doc-color);
+    }
+
+    .doc-content a { color: var(--accent); text-decoration: none; }
+    .doc-content a:hover { text-decoration: underline; }
+
+    .doc-content hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2em 0;
+    }
+
+    .doc-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 1em;
+      font-size: 0.9em;
+    }
+    .doc-content th, .doc-content td {
+      border: 1px solid var(--border);
+      padding: 0.5em 0.75em;
+      text-align: left;
+    }
+    .doc-content th { background: var(--page-bg); font-weight: 600; }
+    .doc-content tr:nth-child(even) td { background: var(--page-bg); }
+
+    .doc-content img { max-width: 100%; height: auto; border-radius: 4px; }
+
+    /* ── Block highlight (comment anchors) ───────────────────────────────────── */
+    /* Bar lives in the 20px gutter to the LEFT of text via ::before.
+       No margin/padding/box-shadow changes on the element itself. */
+
+    .cmt-block-highlight {
+      position: relative;
       cursor: pointer;
-      border-radius: 2px;
-      padding: 1px 0;
       transition: background 0.15s;
     }
 
-    mark.cmt-highlight:hover { background: var(--mark-hover-bg); }
-    mark.cmt-highlight.active { background: var(--mark-hover-bg); box-shadow: 0 0 0 2px var(--mark-active-shadow); }
-    mark.cmt-highlight.orphaned { background: #fee2e2; border-bottom-color: #ef4444; }
+    .cmt-block-highlight::before {
+      content: '';
+      position: absolute;
+      left: -16px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--mark-border);
+      border-radius: 2px;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    .cmt-block-highlight:hover { background: rgba(234, 179, 8, 0.08); }
+    .cmt-block-highlight:hover::before { opacity: 1; }
+
+    .cmt-block-highlight.cmt-block-active { background: rgba(234, 179, 8, 0.13); }
+    .cmt-block-highlight.cmt-block-active::before { opacity: 1; width: 3px; }
+
+    .cmt-block-highlight.cmt-block-resolved::before { background: #16a34a; }
+    .cmt-block-highlight.cmt-block-resolved:hover { background: rgba(22, 163, 74, 0.07); }
+    .cmt-block-highlight.cmt-block-resolved.cmt-block-active { background: rgba(22, 163, 74, 0.11); }
 
     /* Add comment button */
     #add-comment-btn {
@@ -681,13 +784,7 @@
 
     .sidebar-tab.active .tab-count { background: var(--accent-light); color: var(--accent-text); }
 
-    /* Resolved highlight in document */
-    mark.cmt-highlight.resolved {
-      background: #dcfce7;
-      border-bottom-color: #16a34a;
-    }
-    mark.cmt-highlight.resolved:hover { background: #bbf7d0; }
-    mark.cmt-highlight.resolved.active { background: #bbf7d0; box-shadow: 0 0 0 2px #16a34a; }
+    /* Resolved highlight handled by .cmt-block-highlight.cmt-block-resolved above */
 
     /* Resolved thread card */
     .comment-card.resolved { border-color: #d1fae5; background: #f0fdf4; }
