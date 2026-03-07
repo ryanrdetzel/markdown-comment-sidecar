@@ -237,6 +237,141 @@
       padding: 40px 20px;
     }
 
+    /* Thread list card extras */
+    .reply-count {
+      background: #ede9fe;
+      color: #6d28d9;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: auto;
+      margin-right: 6px;
+      white-space: nowrap;
+    }
+
+    .thread-sep {
+      font-size: 11px;
+      color: #d1d5db;
+      text-align: center;
+      margin: 4px 0;
+      letter-spacing: 2px;
+    }
+
+    .comment-text.last {
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    /* Thread conversation view */
+    .thread-back {
+      background: none;
+      border: none;
+      color: #7c3aed;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .thread-back:hover { color: #6d28d9; }
+
+    .thread-anchor {
+      background: #fef9c3;
+      border-left: 3px solid #eab308;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #713f12;
+      border-radius: 3px;
+      margin: 12px;
+      font-style: italic;
+    }
+
+    .message-bubble {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 0 12px 8px;
+    }
+
+    .message-bubble .message-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #1f2937;
+    }
+
+    .message-bubble .message-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+    }
+
+    .message-bubble .message-date {
+      font-size: 10px;
+      color: #d1d5db;
+    }
+
+    /* Reply area */
+    .reply-area {
+      border-top: 1px solid #e5e7eb;
+      padding: 12px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .reply-area textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+      min-height: 64px;
+    }
+
+    .reply-area textarea:focus { border-color: #7c3aed; box-shadow: 0 0 0 2px #ede9fe; }
+
+    .reply-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-delete-thread {
+      background: none;
+      border: none;
+      color: #d1d5db;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .btn-delete-thread:hover { color: #ef4444; }
+
+    .btn-reply {
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .btn-reply:hover { background: #6d28d9; }
+    .btn-reply:disabled { opacity: 0.5; cursor: not-allowed; }
+
     /* Add comment modal */
     #comment-modal {
       position: fixed;
@@ -335,11 +470,18 @@
     </div>
 
     <aside class="sidebar">
-      <div class="sidebar-header">
+      <div class="sidebar-header" id="sidebar-header">
         Comments <span id="comment-count">0</span>
       </div>
       <div class="comments-list" id="comments-list">
         <div class="empty-state">Select text in the document to add a comment.</div>
+      </div>
+      <div class="reply-area" id="reply-area" style="display:none">
+        <textarea id="reply-input" placeholder="Reply to this thread..." rows="3"></textarea>
+        <div class="reply-actions">
+          <button class="btn-delete-thread" id="btn-delete-thread">Delete thread</button>
+          <button class="btn-reply" id="btn-reply">Reply</button>
+        </div>
       </div>
     </aside>
   </div>

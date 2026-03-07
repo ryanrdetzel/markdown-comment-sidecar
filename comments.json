@@ -1,167 +1,262 @@
 [
   {
     "id": "cmt_test_1",
-    "text": "Test comment on: The Complete Guide to Modern Software En",
     "anchor": {
       "context": "The Complete Guide to Modern Software Engineering",
       "prefix": "# ",
       "suffix": "\n\nA comprehensive re",
       "offset_guess": 2
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_1_m0",
+        "text": "Test comment on: The Complete Guide to Modern Software En",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      },
+      {
+        "id": "cmt_test_1_m1",
+        "text": "This is areply",
+        "createdAt": "2026-03-07T12:24:36.287Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_2",
-    "text": "Test comment on: Version Control Discipline",
     "anchor": {
       "context": "Version Control Discipline",
       "prefix": "as one.\n\n---\n\n## 2. ",
       "suffix": "\n\nVersion control is",
       "offset_guess": 2067
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_2_m0",
+        "text": "Test comment on: Version Control Discipline",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      },
+      {
+        "id": "cmt_test_2_m1",
+        "text": "sdfsdf",
+        "createdAt": "2026-03-07T12:24:42.199Z"
+      },
+      {
+        "id": "cmt_test_2_m2",
+        "text": "dfgdfg",
+        "createdAt": "2026-03-07T12:24:43.200Z"
+      },
+      {
+        "id": "cmt_test_2_m3",
+        "text": "This is a four message reply",
+        "createdAt": "2026-03-07T12:24:47.740Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_3",
-    "text": "Test comment on: code that can be read, understood, and c",
     "anchor": {
       "context": "code that can be read, understood, and changed by humans",
       "prefix": " that works — it is ",
       "suffix": ". The machine does n",
       "offset_guess": 338
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_3_m0",
+        "text": "Test comment on: code that can be read, understood, and c",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_4",
-    "text": "Test comment on: The machine does not care about your var",
     "anchor": {
       "context": "The machine does not care about your variable names",
       "prefix": " changed by humans. ",
       "suffix": " or your indentation",
       "offset_guess": 396
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_4_m0",
+        "text": "Test comment on: The machine does not care about your var",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_5",
-    "text": "Test comment on: itemsById[item.id] = item;",
     "anchor": {
       "context": "itemsById[item.id] = item;",
       "prefix": "st item of arr) {\n  ",
       "suffix": "\n}\n```\n\nThe second v",
       "offset_guess": 983
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_5_m0",
+        "text": "Test comment on: itemsById[item.id] = item;",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_6",
-    "text": "Test comment on: Pronounceable",
     "anchor": {
       "context": "Pronounceable",
       "prefix": "al properties:\n\n- **",
       "suffix": "**: if you cannot sa",
       "offset_guess": 1289
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_6_m0",
+        "text": "Test comment on: Pronounceable",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_7",
-    "text": "Test comment on: There are only two hard things in Comput",
     "anchor": {
       "context": "There are only two hard things in Computer Science",
       "prefix": " not a hash map\n\n> \"",
       "suffix": ": cache invalidation",
       "offset_guess": 1638
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_7_m0",
+        "text": "Test comment on: There are only two hard things in Comput",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_8",
-    "text": "Test comment on: Never force-push to a shared branch",
     "anchor": {
       "context": "Never force-push to a shared branch",
       "prefix": " are universal:\n\n1. ",
       "suffix": "\n2. Keep feature bra",
       "offset_guess": 3515
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_8_m0",
+        "text": "Test comment on: Never force-push to a shared branch",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_9",
-    "text": "Test comment on: Trunk-based",
     "anchor": {
       "context": "Trunk-based",
       "prefix": "e |\n|---|---|---|\n| ",
       "suffix": " | Continuous delive",
       "offset_guess": 3192
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_9_m0",
+        "text": "Test comment on: Trunk-based",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_10",
-    "text": "Test comment on: Assume your dependencies are reliable",
     "anchor": {
       "context": "Assume your dependencies are reliable",
       "prefix": "ning for Failure\n\n~~",
       "suffix": ".~~ Assume everythin",
       "offset_guess": 7858
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_10_m0",
+        "text": "Test comment on: Assume your dependencies are reliable",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_11",
-    "text": "Test comment on: Unhandled promise rejections",
     "anchor": {
       "context": "Unhandled promise rejections",
       "prefix": "three things:\n\n1. **",
       "suffix": "** — always return o",
       "offset_guess": 5514
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_11_m0",
+        "text": "Test comment on: Unhandled promise rejections",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_12",
-    "text": "Test comment on: Broken Access Control",
     "anchor": {
       "context": "Broken Access Control",
       "prefix": "over the years:\n\n1. ",
       "suffix": "\n2. Cryptographic Fa",
       "offset_guess": 10690
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_12_m0",
+        "text": "Test comment on: Broken Access Control",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_13",
-    "text": "Test comment on: Software engineering is a craft that rew",
     "anchor": {
       "context": "Software engineering is a craft that rewards lifelong learning",
       "prefix": "---\n\n## Conclusion\n\n",
       "suffix": ". The fundamentals —",
       "offset_guess": 14092
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_13_m0",
+        "text": "Test comment on: Software engineering is a craft that rew",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_14",
-    "text": "Test comment on: SELECT *",
     "anchor": {
       "context": "SELECT *",
       "prefix": "ting everything**: `",
       "suffix": "` when you need two ",
       "offset_guess": 9588
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_14_m0",
+        "text": "Test comment on: SELECT *",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   },
   {
     "id": "cmt_test_15",
-    "text": "Test comment on: Premature optimization is the root of al",
     "anchor": {
       "context": "Premature optimization is the root of all evil",
       "prefix": "re You Optimize\n\n> \"",
       "suffix": ".\"\n> — Donald Knuth\n",
       "offset_guess": 8492
     },
-    "createdAt": "2026-03-07T12:12:55.219Z"
+    "messages": [
+      {
+        "id": "cmt_test_15_m0",
+        "text": "Test comment on: Premature optimization is the root of al",
+        "createdAt": "2026-03-07T12:12:55.219Z"
+      }
+    ]
   }
 ]
