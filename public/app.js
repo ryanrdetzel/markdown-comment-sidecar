@@ -45,12 +45,12 @@ let state = {
   markdown: '',
   html: '',
   threads: [],
-  selection: null,     // { elementType, elementIndex, elementText, selectedText }
-  view: 'preview',     // 'preview' | 'markdown'
-  sidebarMode: 'list', // 'list' | 'thread'
-  sidebarTab: 'active',// 'active' | 'resolved'
+  selection: null,       // { elementType, elementIndex, elementText, selectedText }
+  view: 'preview',       // 'preview' | 'markdown'
+  sidebarMode: 'list',   // 'list' | 'block'
+  sidebarTab: 'active',  // 'active' | 'resolved'
   activeThreadId: null,
-  blockFilterIds: null, // when set, sidebar list is filtered to these thread IDs
+  expandedThreadIds: new Set(), // threads with expanded conversation visible
 };
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
@@ -371,151 +371,7 @@ function renderMarkdownView() {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 function renderSidebar() {
-  if (state.sidebarMode === 'thread' && state.activeThreadId) {
-    const thread = state.threads.find(t => t.id === state.activeThreadId);
-    if (thread) { renderThreadView(thread); return; }
-  }
-  if (state.sidebarMode === 'block' && state.blockFilterIds) {
-    renderBlockView();
-    return;
-  }
   renderThreadList();
-}
-
-function renderBlockView() {
-  replyArea.style.display = 'none';
-  sidebarHeader.innerHTML = '';
-
-  const backBtn = document.createElement('button');
-  backBtn.className = 'thread-back';
-  backBtn.innerHTML = '&#8592; All comments';
-  backBtn.addEventListener('click', () => {
-    state.blockFilterIds = null;
-    state.sidebarMode = 'list';
-    docContent.querySelectorAll('.cmt-block-active').forEach(el => el.classList.remove('cmt-block-active'));
-    renderSidebar();
-  });
-
-  const threadCount = state.blockFilterIds.length;
-  const label = document.createElement('span');
-  label.style.cssText = 'font-size:11px; color:var(--text-muted); margin-left:auto;';
-  label.textContent = `${threadCount} thread${threadCount !== 1 ? 's' : ''}`;
-
-  sidebarHeader.appendChild(backBtn);
-  sidebarHeader.appendChild(label);
-
-  // Re-apply active highlight on the block elements
-  docContent.querySelectorAll('.cmt-block-highlight').forEach(el => {
-    const elIds = el.dataset.cmtIds ? el.dataset.cmtIds.split(',') : [];
-    el.classList.toggle('cmt-block-active', state.blockFilterIds.some(id => elIds.includes(id)));
-  });
-
-  commentsList.innerHTML = '';
-  const threads = state.threads.filter(t => state.blockFilterIds.includes(t.id));
-
-  threads.forEach((thread, idx) => {
-    if (idx > 0) {
-      const sep = document.createElement('div');
-      sep.className = 'block-thread-sep';
-      commentsList.appendChild(sep);
-    }
-
-    const section = document.createElement('div');
-    section.className = 'block-thread-section';
-
-    // Anchor quote
-    const anchorEl = document.createElement('div');
-    anchorEl.className = 'thread-anchor';
-    const ctx = thread.anchor.selectedText || thread.anchor.elementText || '';
-    anchorEl.textContent = `"${ctx.slice(0, 60)}${ctx.length > 60 ? '…' : ''}"`;
-    section.appendChild(anchorEl);
-
-    if (thread.resolved) {
-      const banner = document.createElement('div');
-      banner.className = 'resolved-banner';
-      banner.innerHTML = `<strong>Resolved</strong>${new Date(thread.resolvedAt).toLocaleString()}`;
-      if (thread.resolvedComment) {
-        const note = document.createElement('div');
-        note.style.cssText = 'margin-top:4px; font-style:italic;';
-        note.textContent = `"${thread.resolvedComment}"`;
-        banner.appendChild(note);
-      }
-      section.appendChild(banner);
-    }
-
-    // Messages
-    for (const msg of thread.messages) {
-      const bubble = document.createElement('div');
-      bubble.className = 'message-bubble';
-
-      const text = document.createElement('div');
-      text.className = 'message-text';
-      text.textContent = msg.text;
-
-      const meta = document.createElement('div');
-      meta.className = 'message-meta';
-
-      if (msg.author) {
-        const authorEl = document.createElement('span');
-        authorEl.className = 'message-author';
-        authorEl.textContent = msg.author;
-        meta.appendChild(authorEl);
-      }
-
-      const date = document.createElement('span');
-      date.className = 'message-date';
-      date.textContent = new Date(msg.created_at || msg.createdAt).toLocaleString();
-      meta.appendChild(date);
-
-      bubble.appendChild(text);
-      bubble.appendChild(meta);
-      section.appendChild(bubble);
-    }
-
-    // Inline reply form (open threads only)
-    if (!thread.resolved) {
-      const replyForm = document.createElement('div');
-      replyForm.className = 'block-thread-reply';
-
-      const ta = document.createElement('textarea');
-      ta.placeholder = 'Reply…';
-      ta.rows = 2;
-
-      const actions = document.createElement('div');
-      actions.className = 'block-thread-reply-actions';
-
-      const replyBtn = document.createElement('button');
-      replyBtn.className = 'btn-reply';
-      replyBtn.textContent = 'Reply';
-      replyBtn.onclick = async () => {
-        const text = ta.value.trim();
-        if (!text) return;
-        replyBtn.disabled = true;
-        try {
-          const res = await fetch(apiUrl(`/api/thread/${thread.id}/reply`), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, author: getAuthor() }),
-          });
-          if (!res.ok) throw new Error('Failed to post reply');
-          await load();
-        } finally {
-          replyBtn.disabled = false;
-        }
-      };
-
-      ta.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) replyBtn.click();
-      });
-
-      actions.appendChild(replyBtn);
-      replyForm.appendChild(ta);
-      replyForm.appendChild(actions);
-      section.appendChild(replyForm);
-    }
-
-    commentsList.appendChild(section);
-  });
 }
 
 function renderThreadList() {
@@ -563,154 +419,187 @@ function renderThreadList() {
   }
 }
 
+function buildMessageBubble(msg) {
+  const bubble = document.createElement('div');
+  bubble.className = 'message-bubble';
+
+  const text = document.createElement('div');
+  text.className = 'message-text';
+  text.textContent = msg.text;
+
+  const meta = document.createElement('div');
+  meta.className = 'message-meta';
+
+  if (msg.author) {
+    const authorEl = document.createElement('span');
+    authorEl.className = 'message-author';
+    authorEl.textContent = msg.author;
+    meta.appendChild(authorEl);
+  }
+
+  const date = document.createElement('span');
+  date.className = 'message-date';
+  date.textContent = new Date(msg.created_at || msg.createdAt).toLocaleString();
+  meta.appendChild(date);
+
+  bubble.appendChild(text);
+  bubble.appendChild(meta);
+  return bubble;
+}
+
 function buildThreadCard(thread) {
   const first = thread.messages[0];
   const last = thread.messages[thread.messages.length - 1];
   const count = thread.messages.length;
   const isActive = thread.id === state.activeThreadId;
+  const isExpanded = state.expandedThreadIds.has(thread.id);
 
   const card = document.createElement('div');
   card.className = 'comment-card'
     + (thread.orphaned ? ' orphaned' : '')
     + (thread.resolved ? ' resolved' : '')
-    + (isActive ? ' active' : '');
+    + (isActive ? ' active' : '')
+    + (isExpanded ? ' expanded' : '');
   card.dataset.id = thread.id;
 
+  // Anchor quote — always visible
   const anchor = document.createElement('div');
   anchor.className = 'comment-anchor' + (thread.orphaned ? ' orphaned-label' : '');
   const ctx = thread.anchor.selectedText || thread.anchor.elementText || '';
   anchor.textContent = thread.orphaned
     ? '⚠ Orphaned — element was removed'
     : `"${ctx.slice(0, 55)}${ctx.length > 55 ? '…' : ''}"`;
-
-  const firstEl = document.createElement('div');
-  firstEl.className = 'comment-text';
-  firstEl.textContent = first.text.length > 80 ? first.text.slice(0, 80) + '…' : first.text;
-
   card.appendChild(anchor);
-  card.appendChild(firstEl);
 
-  const lastText = thread.resolvedComment || (count > 1 ? last.text : null);
-  if (lastText) {
-    const sep = document.createElement('div');
-    sep.className = 'thread-sep';
-    sep.textContent = '···';
+  if (isExpanded) {
+    // ── Expanded: all messages + reply form ──────────────────────────────────
 
-    const lastEl = document.createElement('div');
-    lastEl.className = 'comment-text last';
-    lastEl.textContent = lastText.length > 80 ? lastText.slice(0, 80) + '…' : lastText;
+    if (thread.resolved) {
+      const banner = document.createElement('div');
+      banner.className = 'resolved-banner inline-resolved';
+      const resolvedDate = new Date(thread.resolvedAt).toLocaleString();
+      banner.innerHTML = `<strong>Resolved</strong>${resolvedDate}`;
+      if (thread.resolvedComment) {
+        const note = document.createElement('div');
+        note.style.cssText = 'margin-top:4px; font-style:italic;';
+        note.textContent = `"${thread.resolvedComment}"`;
+        banner.appendChild(note);
+      }
+      card.appendChild(banner);
+    }
 
-    card.appendChild(sep);
-    card.appendChild(lastEl);
+    for (const msg of thread.messages) {
+      card.appendChild(buildMessageBubble(msg));
+    }
+
+    if (!thread.resolved) {
+      card.appendChild(buildInlineReplyForm(thread));
+    }
+
+    // Footer: collapse + delete
+    const footer = document.createElement('div');
+    footer.className = 'card-footer';
+
+    const collapseBtn = document.createElement('button');
+    collapseBtn.className = 'collapse-thread-btn';
+    collapseBtn.textContent = '▴ Collapse';
+    collapseBtn.onclick = (e) => {
+      e.stopPropagation();
+      state.expandedThreadIds.delete(thread.id);
+      renderThreadList();
+    };
+    footer.appendChild(collapseBtn);
+
+    if (!thread.resolved) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-delete-thread';
+      delBtn.textContent = 'Delete thread';
+      delBtn.onclick = (e) => { e.stopPropagation(); deleteThread(thread.id); };
+      footer.appendChild(delBtn);
+    }
+
+    card.appendChild(footer);
+
+  } else {
+    // ── Collapsed: first + last preview ──────────────────────────────────────
+
+    const firstEl = document.createElement('div');
+    firstEl.className = 'comment-text';
+    firstEl.textContent = first.text.length > 80 ? first.text.slice(0, 80) + '…' : first.text;
+    card.appendChild(firstEl);
+
+    const lastText = thread.resolvedComment || (count > 1 ? last.text : null);
+    if (lastText) {
+      const sep = document.createElement('div');
+      sep.className = 'thread-sep';
+      sep.textContent = '···';
+
+      const lastEl = document.createElement('div');
+      lastEl.className = 'comment-text last';
+      lastEl.textContent = lastText.length > 80 ? lastText.slice(0, 80) + '…' : lastText;
+
+      card.appendChild(sep);
+      card.appendChild(lastEl);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'comment-meta';
+
+    const authorDateEl = document.createElement('span');
+    authorDateEl.className = 'comment-date';
+    const authorStr = first.author ? `${first.author} · ` : '';
+    authorDateEl.textContent = authorStr + new Date(first.created_at || first.createdAt).toLocaleString();
+    meta.appendChild(authorDateEl);
+
+    if (thread.resolved) {
+      const badge = document.createElement('span');
+      badge.className = 'resolved-badge';
+      badge.textContent = 'Resolved';
+      meta.appendChild(badge);
+    }
+
+    const expandBtn = document.createElement('button');
+    expandBtn.className = 'expand-thread-btn';
+    if (count > 1) {
+      expandBtn.textContent = `${count - 1} repl${count - 1 === 1 ? 'y' : 'ies'} ▾`;
+    } else if (thread.resolved) {
+      expandBtn.textContent = 'View ▾';
+    } else {
+      expandBtn.textContent = 'Reply ▾';
+    }
+    expandBtn.onclick = (e) => {
+      e.stopPropagation();
+      state.expandedThreadIds.add(thread.id);
+      setActiveThread(thread.id);
+      renderThreadList();
+      // scroll the card into view after render
+      requestAnimationFrame(() => {
+        const el = commentsList.querySelector(`.comment-card[data-id="${thread.id}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    };
+    meta.appendChild(expandBtn);
+    card.appendChild(meta);
+
+    // Clicking the card expands and highlights the doc element
+    card.addEventListener('click', () => openThread(thread.id));
   }
 
-  const meta = document.createElement('div');
-  meta.className = 'comment-meta';
-
-  const authorDateEl = document.createElement('span');
-  authorDateEl.className = 'comment-date';
-  const authorStr = first.author ? `${first.author} · ` : '';
-  authorDateEl.textContent = authorStr + new Date(first.created_at || first.createdAt).toLocaleString();
-  meta.appendChild(authorDateEl);
-
-  if (thread.resolved) {
-    const badge = document.createElement('span');
-    badge.className = 'resolved-badge';
-    badge.textContent = 'Resolved';
-    meta.appendChild(badge);
-  } else if (count > 1) {
-    const badge = document.createElement('span');
-    badge.className = 'reply-count';
-    badge.textContent = `${count - 1} repl${count - 1 === 1 ? 'y' : 'ies'}`;
-    meta.appendChild(badge);
-  }
-
-  card.appendChild(meta);
-  card.addEventListener('click', () => openThread(thread.id));
   return card;
 }
 
-function renderThreadView(thread) {
-  state.sidebarMode = 'thread';
+function buildInlineReplyForm(thread) {
+  const form = document.createElement('div');
+  form.className = 'inline-reply-form';
 
-  sidebarHeader.innerHTML = '';
-  const back = document.createElement('button');
-  back.className = 'thread-back';
-  back.innerHTML = '&#8592; All comments';
-  back.addEventListener('click', closeThread);
-  sidebarHeader.appendChild(back);
+  const ta = document.createElement('textarea');
+  ta.placeholder = 'Reply…';
+  ta.rows = 2;
 
-  const anchorEl = document.createElement('div');
-  anchorEl.className = 'thread-anchor';
-  // Show selected words if available, otherwise fall back to element text
-  const ctx = thread.anchor.selectedText || thread.anchor.elementText || '';
-  anchorEl.textContent = `"${ctx.slice(0, 80)}${ctx.length > 80 ? '…' : ''}"`;
+  const actions = document.createElement('div');
+  actions.className = 'inline-reply-actions';
 
-  commentsList.innerHTML = '';
-  commentsList.appendChild(anchorEl);
-
-  if (thread.resolved) {
-    const banner = document.createElement('div');
-    banner.className = 'resolved-banner';
-    const resolvedDate = new Date(thread.resolvedAt).toLocaleString();
-    banner.innerHTML = `<strong>Resolved</strong>${resolvedDate}`;
-    if (thread.resolvedComment) {
-      const note = document.createElement('div');
-      note.style.cssText = 'margin-top:6px; font-style:italic;';
-      note.textContent = `"${thread.resolvedComment}"`;
-      banner.appendChild(note);
-    }
-    commentsList.appendChild(banner);
-  }
-
-  for (const msg of thread.messages) {
-    const bubble = document.createElement('div');
-    bubble.className = 'message-bubble';
-
-    const text = document.createElement('div');
-    text.className = 'message-text';
-    text.textContent = msg.text;
-
-    const meta = document.createElement('div');
-    meta.className = 'message-meta';
-
-    if (msg.author) {
-      const authorEl = document.createElement('span');
-      authorEl.className = 'message-author';
-      authorEl.textContent = msg.author;
-      meta.appendChild(authorEl);
-    }
-
-    const date = document.createElement('span');
-    date.className = 'message-date';
-    date.textContent = new Date(msg.created_at || msg.createdAt).toLocaleString();
-    meta.appendChild(date);
-
-    bubble.appendChild(text);
-    bubble.appendChild(meta);
-    commentsList.appendChild(bubble);
-  }
-
-  if (thread.resolved) {
-    replyArea.style.display = 'none';
-    return;
-  }
-
-  replyArea.style.display = 'flex';
-  replyInput.value = '';
-
-  const actionsRow = replyArea.querySelector('.reply-actions');
-  actionsRow.innerHTML = '';
-
-  const delBtn = document.createElement('button');
-  delBtn.className = 'btn-delete-thread';
-  delBtn.textContent = 'Delete thread';
-  delBtn.onclick = () => deleteThread(thread.id);
-  actionsRow.appendChild(delBtn);
-
-  const rightBtns = document.createElement('div');
-  rightBtns.style.cssText = 'display:flex; gap:6px; align-items:center;';
-
+  // Split resolve button
   const resolveGroup = document.createElement('div');
   resolveGroup.className = 'resolve-btn-group';
 
@@ -731,7 +620,7 @@ function renderThreadView(thread) {
   withComment.textContent = 'Resolve with comment';
   withComment.onclick = () => {
     dropdown.hidden = true;
-    showResolveForm(thread.id);
+    showInlineResolveForm(thread.id, form);
   };
   dropdown.appendChild(withComment);
 
@@ -739,7 +628,6 @@ function renderThreadView(thread) {
     e.stopPropagation();
     dropdown.hidden = !dropdown.hidden;
   };
-
   document.addEventListener('click', () => { dropdown.hidden = true; }, { once: true });
 
   resolveGroup.appendChild(resolveMain);
@@ -749,28 +637,45 @@ function renderThreadView(thread) {
   const replyBtn = document.createElement('button');
   replyBtn.className = 'btn-reply';
   replyBtn.textContent = 'Reply';
-  replyBtn.onclick = () => submitReply(thread.id);
-
-  rightBtns.appendChild(resolveGroup);
-  rightBtns.appendChild(replyBtn);
-  actionsRow.appendChild(rightBtns);
-
-  replyInput.onkeydown = e => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitReply(thread.id);
+  replyBtn.onclick = async () => {
+    const text = ta.value.trim();
+    if (!text) return;
+    replyBtn.disabled = true;
+    try {
+      const res = await fetch(apiUrl(`/api/thread/${thread.id}/reply`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, author: getAuthor() }),
+      });
+      if (!res.ok) throw new Error('Failed to post reply');
+      state.expandedThreadIds.add(thread.id);
+      state.activeThreadId = thread.id;
+      await load();
+    } finally {
+      replyBtn.disabled = false;
+    }
   };
 
-  replyArea.querySelector('.resolve-form')?.remove();
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) replyBtn.click();
+  });
+
+  actions.appendChild(resolveGroup);
+  actions.appendChild(replyBtn);
+  form.appendChild(ta);
+  form.appendChild(actions);
+  return form;
 }
 
-function showResolveForm(threadId) {
-  replyArea.querySelector('.resolve-form')?.remove();
+function showInlineResolveForm(threadId, container) {
+  container.querySelector('.inline-resolve-form')?.remove();
 
   const form = document.createElement('div');
-  form.className = 'resolve-form';
+  form.className = 'inline-resolve-form resolve-form';
 
   const ta = document.createElement('textarea');
   ta.placeholder = 'Why is this being resolved? (optional)';
-  ta.rows = 3;
+  ta.rows = 2;
 
   const formActions = document.createElement('div');
   formActions.className = 'resolve-form-actions';
@@ -793,13 +698,21 @@ function showResolveForm(threadId) {
   formActions.appendChild(confirm);
   form.appendChild(ta);
   form.appendChild(formActions);
-  replyArea.appendChild(form);
+  container.appendChild(form);
   ta.focus();
 }
+
 
 // ─── Thread actions ───────────────────────────────────────────────────────────
 
 function openBlockThreads(ids) {
+  // Expand all threads on this block, set first as active
+  state.expandedThreadIds.clear();
+  ids.forEach(id => state.expandedThreadIds.add(id));
+  state.activeThreadId = ids[0];
+  state.sidebarMode = 'list';
+  state.blockFilterIds = null;
+
   if (sidebar && sidebar.classList.contains('collapsed')) {
     sidebar.classList.remove('collapsed');
     sidebarResizer.classList.remove('hidden');
@@ -808,20 +721,23 @@ function openBlockThreads(ids) {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
   }
 
-  state.activeThreadId = null;
-  state.sidebarMode = 'block';
-  state.blockFilterIds = ids;
-
-  // Highlight all threads on this block as active
+  // Mark all threads on this block as active in the doc
   docContent.querySelectorAll('.cmt-block-highlight').forEach(el => {
     const elIds = el.dataset.cmtIds ? el.dataset.cmtIds.split(',') : [];
     el.classList.toggle('cmt-block-active', ids.some(id => elIds.includes(id)));
   });
 
   renderSidebar();
+
+  // Scroll sidebar to the first thread
+  requestAnimationFrame(() => {
+    const el = commentsList.querySelector(`.comment-card[data-id="${ids[0]}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 }
 
-function openThread(id) {
+// setActiveThread: update doc highlights without changing sidebar mode or expansion
+function setActiveThread(id) {
   if (sidebar && sidebar.classList.contains('collapsed')) {
     sidebar.classList.remove('collapsed');
     sidebarResizer.classList.remove('hidden');
@@ -836,24 +752,20 @@ function openThread(id) {
   const nextResolved = state.threads.find(t => t.id === id)?.resolved;
 
   state.activeThreadId = id;
-  state.sidebarMode = 'thread';
-  state.blockFilterIds = null;
 
   if (prevResolved || nextResolved) {
     renderView();
   } else {
-    // Update active class on preview block highlights
     docContent.querySelectorAll('.cmt-block-highlight').forEach(el => {
       const ids = el.dataset.cmtIds ? el.dataset.cmtIds.split(',') : [];
       el.classList.toggle('cmt-block-active', ids.includes(id));
     });
-    // Update active class on markdown view marks
     docContent.querySelectorAll('mark.cmt-highlight').forEach(m => {
       m.classList.toggle('active', m.dataset.cmtId === id);
     });
   }
 
-  // Scroll to the highlighted element
+  // Scroll doc to the highlighted element
   const thread = state.threads.find(t => t.id === id);
   if (thread) {
     const el = state.view === 'preview'
@@ -861,8 +773,19 @@ function openThread(id) {
       : docContent.querySelector(`mark.cmt-highlight[data-cmt-id="${id}"]`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+}
 
+// openThread: expand + activate (called from doc clicks and after new comment)
+function openThread(id) {
+  state.expandedThreadIds.clear();
+  state.expandedThreadIds.add(id);
+  state.sidebarMode = 'list';
+  setActiveThread(id);
   renderSidebar();
+  requestAnimationFrame(() => {
+    const el = commentsList.querySelector(`.comment-card[data-id="${id}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 }
 
 function closeThread() {
@@ -870,9 +793,9 @@ function closeThread() {
     ? state.threads.find(t => t.id === state.activeThreadId)?.resolved
     : false;
 
+  if (state.activeThreadId) state.expandedThreadIds.delete(state.activeThreadId);
   state.activeThreadId = null;
   state.sidebarMode = 'list';
-  state.blockFilterIds = null;
 
   if (wasResolved) {
     renderView();
@@ -884,28 +807,6 @@ function closeThread() {
   renderSidebar();
 }
 
-async function submitReply(threadId) {
-  const text = replyInput.value.trim();
-  if (!text) return;
-
-  const author = getAuthor();
-
-  const btn = replyArea.querySelector('.btn-reply');
-  if (btn) btn.disabled = true;
-  try {
-    const res = await fetch(apiUrl(`/api/thread/${threadId}/reply`), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, author }),
-    });
-    if (!res.ok) throw new Error('Failed to post reply');
-    await load();
-    openThread(threadId);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
 async function resolveThread(threadId, comment) {
   await fetch(apiUrl(`/api/thread/${threadId}/resolve`), {
     method: 'POST',
@@ -914,7 +815,7 @@ async function resolveThread(threadId, comment) {
   });
   state.activeThreadId = null;
   state.sidebarMode = 'list';
-  state.sidebarTab = 'resolved';
+  state.expandedThreadIds.delete(threadId);
   await load();
 }
 
@@ -922,6 +823,7 @@ async function deleteThread(id) {
   await fetch(apiUrl(`/api/thread/${id}`), { method: 'DELETE' });
   state.activeThreadId = null;
   state.sidebarMode = 'list';
+  state.expandedThreadIds.delete(id);
   await load();
 }
 

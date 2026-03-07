@@ -369,7 +369,7 @@
       background: var(--page-bg);
       border: 1px solid var(--border);
       border-radius: 6px;
-      overflow-x: auto;
+      overflow: visible; /* keep ::before gutter bar visible; code handles scrolling */
     }
     .doc-content pre code {
       font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
@@ -378,6 +378,8 @@
       border: none;
       padding: 0;
       color: var(--doc-color);
+      display: block;
+      overflow-x: auto;
     }
     .doc-content code {
       font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
@@ -469,6 +471,7 @@
        Shift both the bar and count badge further left to clear it. */
     li.cmt-block-highlight::before { left: -26px; }
     li.cmt-block-highlight::after  { left: -46px; }
+
 
     /* Add comment button */
     #add-comment-btn {
@@ -999,6 +1002,100 @@
     .block-thread-reply-actions {
       display: flex;
       justify-content: flex-end;
+    }
+
+    /* Expand / collapse thread buttons */
+    .expand-thread-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .expand-thread-btn:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    .collapse-thread-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .collapse-thread-btn:hover { color: var(--doc-color); }
+
+    /* Expanded card */
+    .comment-card.expanded {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+
+    .comment-card.expanded .comment-anchor {
+      margin-bottom: 8px;
+    }
+
+    /* Message bubbles inside expanded card (no outer margin needed) */
+    .comment-card .message-bubble {
+      margin: 0 0 6px;
+      border-radius: 6px;
+    }
+
+    .comment-card .message-bubble:last-of-type { margin-bottom: 0; }
+
+    /* Inline reply form inside card */
+    .inline-reply-form {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .inline-reply-form textarea {
+      width: 100%;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+      background: var(--doc-bg);
+      color: var(--doc-color);
+    }
+
+    .inline-reply-form textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+
+    .inline-reply-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Inline resolved banner (inside card, no outer margin) */
+    .resolved-banner.inline-resolved {
+      margin: 0 0 8px;
+    }
+
+    /* Card footer: collapse + delete */
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
     }
 
     /* Add comment modal */
