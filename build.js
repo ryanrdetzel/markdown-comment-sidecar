@@ -91,6 +91,8 @@ function generateHtml({
 <body>
   <header>
     <div class="header-controls">
+      <span id="author-display"></span>
+      <span> &#x2022; </span>
       <select id="theme-select" class="theme-select" title="Change theme">
         <option value="classic">Classic</option>
         <option value="dark">Dark</option>
@@ -106,9 +108,6 @@ function generateHtml({
     </div>
   </header>
 
-  <div class="author-bar">
-    <span id="author-display"></span>
-  </div>
 
   <div class="layout">
     <div class="doc-pane">

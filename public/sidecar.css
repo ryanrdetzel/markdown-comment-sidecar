@@ -291,28 +291,20 @@ header span {
   background: rgba(255, 255, 255, 0.18);
 }
 
-/* Author bar */
-.author-bar {
-  background: var(--author-bar-bg);
-  border-bottom: 1px solid var(--author-bar-border);
-  padding: 6px 20px;
+
+#author-display {
   font-size: 12px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 #author-display strong {
-  color: var(--doc-color);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 #author-display button {
   background: none;
   border: none;
-  color: var(--accent);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 12px;
   cursor: pointer;
   padding: 0;
@@ -320,6 +312,7 @@ header span {
 }
 
 #author-display button:hover {
+  color: #fff;
   text-decoration: underline;
 }
 
