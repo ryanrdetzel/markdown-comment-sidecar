@@ -260,7 +260,7 @@ function watch(args) {
   console.log("\nWatching for changes...");
 
   const inputDir = path.resolve(args.input);
-  fs.watch(inputDir, { recursive: true }, (event, filename) => {
+  fs.watch(inputDir, { recursive: true }, (_event, filename) => {
     if (!filename || !filename.endsWith(".md")) return;
     const filePath = path.join(inputDir, filename);
     if (!fs.existsSync(filePath)) return;

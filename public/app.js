@@ -481,7 +481,7 @@ function buildMessageBubble(msg, threadId) {
   return bubble;
 }
 
-function showMessageEditForm(msg, threadId, bubble, textEl) {
+function showMessageEditForm(msg, _threadId, bubble, textEl) {
   if (bubble.querySelector('.msg-edit-form')) return;
 
   const form = document.createElement('div');
@@ -524,6 +524,7 @@ function showMessageEditForm(msg, threadId, bubble, textEl) {
   ta.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save.click();
     if (e.key === 'Escape') form.remove();
+    if (e.key === 'Tab') { e.preventDefault(); save.focus(); }
   });
 
   formActions.appendChild(cancel);
@@ -535,7 +536,7 @@ function showMessageEditForm(msg, threadId, bubble, textEl) {
   ta.select();
 }
 
-function showMessageDeleteConfirm(msg, threadId, bubble, deleteBtn) {
+function showMessageDeleteConfirm(msg, _threadId, bubble, _deleteBtn) {
   if (bubble.querySelector('.msg-delete-confirm')) return;
 
   const confirm = document.createElement('div');
@@ -777,6 +778,7 @@ function buildInlineReplyForm(thread) {
 
   ta.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) replyBtn.click();
+    if (e.key === 'Tab') { e.preventDefault(); replyBtn.focus(); }
   });
 
   actions.appendChild(resolveGroup);
@@ -811,6 +813,7 @@ function showInlineResolveForm(threadId, container) {
 
   ta.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) resolveThread(threadId, ta.value.trim() || null);
+    if (e.key === 'Tab') { e.preventDefault(); confirm.focus(); }
   });
 
   formActions.appendChild(cancel);
@@ -1059,6 +1062,7 @@ function closeModal() {
 
 commentInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitComment();
+  if (e.key === 'Tab') { e.preventDefault(); modalSubmit.focus(); }
 });
 
 modalSubmit.addEventListener('click', submitComment);

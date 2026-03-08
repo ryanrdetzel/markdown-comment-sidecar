@@ -1,7 +1,7 @@
 .env
 node_modules
 .DS_Store
+.site-id
+.claude/
 dist
-docs
-*.db*
 data/
