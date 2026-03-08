@@ -2,21 +2,12 @@ const express = require('express');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { marked } = require('marked');
+const { marked } = require('./lib/marked-config');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const store = require('./lib/sidecar-store').init(
   process.env.DATA_DIR || path.join(__dirname, 'data')
 );
-
-// Escape raw HTML blocks in markdown so injected HTML can't execute scripts.
-marked.use({
-  renderer: {
-    html({ raw }) {
-      return raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    },
-  },
-});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -102,11 +93,11 @@ app.get('/api/threads', (req, res) => {
   }
 });
 
+const VALID_ELEMENT_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'li', 'blockquote', 'td', 'th']);
+
 // POST /api/comment — creates a new thread
 app.post('/api/comment', commentLimiter, (req, res) => {
   const { documentId, text, author, elementType, elementIndex, elementText, selectedText } = req.body;
-
-  const VALID_ELEMENT_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'li', 'blockquote', 'td', 'th']);
 
   if (!documentId || !text || !elementType || elementIndex == null) {
     return res.status(400).json({ error: 'documentId, text, elementType, and elementIndex are required' });
@@ -174,15 +165,13 @@ app.post('/api/thread/:id/reply', commentLimiter, (req, res) => {
   const documentId = threadIndex.get(id);
   if (!documentId) return res.status(404).json({ error: 'Thread not found' });
 
-  const threads = store.getThreads(documentId);
-  const thread = threads.find(t => t.id === id);
-  if (!thread) return res.status(404).json({ error: 'Thread not found' });
-
   const messageId = crypto.randomUUID();
   const now = new Date().toISOString();
   const message = { id: messageId, text, author: author || null, createdAt: now };
 
-  store.addReply(documentId, id, message);
+  if (!store.addReply(documentId, id, message)) {
+    return res.status(404).json({ error: 'Thread not found' });
+  }
   messageIndex.set(message.id, { documentId, threadId: id });
   res.json({ success: true, message });
 });

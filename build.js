@@ -15,16 +15,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { marked } = require("marked");
-
-// Escape raw HTML blocks so injected HTML can't execute scripts.
-marked.use({
-  renderer: {
-    html({ raw }) {
-      return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    },
-  },
-});
+const { marked } = require("./lib/marked-config");
 
 const {
   parseFrontmatter,
