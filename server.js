@@ -156,11 +156,11 @@ app.get('/auth/google/callback', async (req, res) => {
     const sessionPayload = { sub: user.sub, email: user.email, name: user.name, picture: user.picture };
     const sessionToken = jwt.sign(sessionPayload, JWT_SECRET, { expiresIn: '30d' });
 
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isHttps = SERVER_URL.startsWith('https://');
     res.cookie('sidecar_session', sessionToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'None' : 'Lax',
+      secure: isHttps,
+      sameSite: isHttps ? 'None' : 'Lax',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
