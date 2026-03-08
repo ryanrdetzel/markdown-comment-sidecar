@@ -3,53 +3,20 @@ const fs = require('fs');
 const path = require('path');
 const { marked } = require('marked');
 const cors = require('cors');
-const Database = require('better-sqlite3');
+const store = require('./lib/sidecar-store').init(
+  process.env.DATA_DIR || path.join(__dirname, 'data')
+);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '*';
 
-// ─── Database setup ────────────────────────────────────────────────────────────
+// In-memory index: threadId → documentId (populated when threads are read)
+const threadIndex = new Map();
 
-const DB_PATH = path.join(__dirname, 'comments.db');
-const db = new Database(DB_PATH);
-
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-// Detect old schema and migrate if needed (element-level anchoring replaces text-offset anchoring)
-try {
-  db.prepare('SELECT anchor_element_type FROM threads LIMIT 1').get();
-} catch {
-  db.exec('DROP TABLE IF EXISTS messages; DROP TABLE IF EXISTS threads;');
+function indexThreads(documentId, threads) {
+  for (const t of threads) threadIndex.set(t.id, documentId);
 }
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS threads (
-    id TEXT PRIMARY KEY,
-    document_id TEXT NOT NULL,
-    anchor_element_type TEXT NOT NULL DEFAULT 'p',
-    anchor_element_index INTEGER NOT NULL DEFAULT 0,
-    anchor_element_text TEXT NOT NULL DEFAULT '',
-    anchor_selected_text TEXT,
-    resolved INTEGER NOT NULL DEFAULT 0,
-    resolved_at TEXT,
-    resolved_comment TEXT,
-    created_at TEXT NOT NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_threads_document ON threads(document_id);
-
-  CREATE TABLE IF NOT EXISTS messages (
-    id TEXT PRIMARY KEY,
-    thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
-    text TEXT NOT NULL,
-    author TEXT,
-    created_at TEXT NOT NULL
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_id);
-`);
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
 
@@ -61,43 +28,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function getThreadsForDocument(documentId) {
-  const threads = db.prepare(`
-    SELECT id, document_id, anchor_element_type, anchor_element_index,
-           anchor_element_text, anchor_selected_text,
-           resolved, resolved_at, resolved_comment, created_at
-    FROM threads WHERE document_id = ? ORDER BY created_at ASC
-  `).all(documentId);
-
-  return threads.map(t => {
-    const messages = db.prepare(`
-      SELECT id, text, author, created_at FROM messages
-      WHERE thread_id = ? ORDER BY created_at ASC
-    `).all(t.id);
-
-    return {
-      id: t.id,
-      documentId: t.document_id,
-      anchor: {
-        elementType: t.anchor_element_type,
-        elementIndex: t.anchor_element_index,
-        elementText: t.anchor_element_text,
-        selectedText: t.anchor_selected_text,
-      },
-      messages,
-      resolved: t.resolved === 1,
-      resolvedAt: t.resolved_at,
-      resolvedComment: t.resolved_comment,
-      createdAt: t.created_at,
-    };
-  });
-}
-
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-// GET /api/document?documentId=xxx
+// GET /api/document?documentId=xxx  (dev mode convenience — serves sample.md)
 app.get('/api/document', (req, res) => {
   const documentId = req.query.documentId || 'local';
   const mdPath = path.join(__dirname, 'sample.md');
@@ -105,7 +38,8 @@ app.get('/api/document', (req, res) => {
   try {
     const markdown = fs.readFileSync(mdPath, 'utf8');
     const html = marked.parse(markdown);
-    const threads = getThreadsForDocument(documentId);
+    const threads = store.getThreads(documentId);
+    indexThreads(documentId, threads);
     res.json({ html, markdown, threads });
   } catch (err) {
     console.error('GET /api/document error:', err);
@@ -119,7 +53,9 @@ app.get('/api/threads', (req, res) => {
   if (!documentId) return res.status(400).json({ error: 'documentId is required' });
 
   try {
-    res.json({ threads: getThreadsForDocument(documentId) });
+    const threads = store.getThreads(documentId);
+    indexThreads(documentId, threads);
+    res.json({ threads });
   } catch (err) {
     console.error('GET /api/threads error:', err);
     res.status(500).json({ error: err.message });
@@ -127,7 +63,6 @@ app.get('/api/threads', (req, res) => {
 });
 
 // POST /api/comment — creates a new thread
-// Body: { documentId, text, author, elementType, elementIndex, elementText, selectedText }
 app.post('/api/comment', (req, res) => {
   const { documentId, text, author, elementType, elementIndex, elementText, selectedText } = req.body;
 
@@ -139,57 +74,60 @@ app.post('/api/comment', (req, res) => {
   const threadId = `thread_${Date.now()}`;
   const messageId = `${threadId}_m0`;
 
-  db.prepare(`
-    INSERT INTO threads (id, document_id, anchor_element_type, anchor_element_index,
-                         anchor_element_text, anchor_selected_text, resolved, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, 0, ?)
-  `).run(threadId, documentId, elementType, elementIndex, elementText || '', selectedText || null, now);
+  const thread = {
+    id: threadId,
+    anchor: {
+      elementType,
+      elementIndex,
+      elementText: elementText || '',
+      selectedText: selectedText || null,
+    },
+    resolved: false,
+    resolvedAt: null,
+    resolvedComment: null,
+    createdAt: now,
+    messages: [
+      { id: messageId, text, author: author || null, createdAt: now },
+    ],
+  };
 
-  db.prepare(`
-    INSERT INTO messages (id, thread_id, text, author, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(messageId, threadId, text, author || null, now);
-
-  const thread = getThreadsForDocument(documentId).find(t => t.id === threadId);
+  store.addThread(documentId, thread);
+  threadIndex.set(threadId, documentId);
   res.json({ success: true, thread });
 });
 
 // POST /api/thread/:id/reply
-// Body: { text, author }
 app.post('/api/thread/:id/reply', (req, res) => {
   const { id } = req.params;
   const { text, author } = req.body;
   if (!text) return res.status(400).json({ error: 'text is required' });
 
-  const thread = db.prepare('SELECT id FROM threads WHERE id = ?').get(id);
+  const documentId = threadIndex.get(id);
+  if (!documentId) return res.status(404).json({ error: 'Thread not found' });
+
+  const threads = store.getThreads(documentId);
+  const thread = threads.find(t => t.id === id);
   if (!thread) return res.status(404).json({ error: 'Thread not found' });
 
-  const msgCount = db.prepare('SELECT COUNT(*) as n FROM messages WHERE thread_id = ?').get(id).n;
-  const messageId = `${id}_m${msgCount}`;
+  const messageId = `${id}_m${thread.messages.length}`;
   const now = new Date().toISOString();
+  const message = { id: messageId, text, author: author || null, createdAt: now };
 
-  db.prepare(`
-    INSERT INTO messages (id, thread_id, text, author, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(messageId, id, text, author || null, now);
-
-  const message = db.prepare('SELECT id, text, author, created_at FROM messages WHERE id = ?').get(messageId);
+  store.addReply(documentId, id, message);
   res.json({ success: true, message });
 });
 
 // POST /api/thread/:id/resolve
-// Body: { comment? }
 app.post('/api/thread/:id/resolve', (req, res) => {
   const { id } = req.params;
   const { comment } = req.body;
 
-  const thread = db.prepare('SELECT id FROM threads WHERE id = ?').get(id);
-  if (!thread) return res.status(404).json({ error: 'Thread not found' });
+  const documentId = threadIndex.get(id);
+  if (!documentId) return res.status(404).json({ error: 'Thread not found' });
 
-  db.prepare(`
-    UPDATE threads SET resolved = 1, resolved_at = ?, resolved_comment = ? WHERE id = ?
-  `).run(new Date().toISOString(), comment || null, id);
-
+  if (!store.resolveThread(documentId, id, comment)) {
+    return res.status(404).json({ error: 'Thread not found' });
+  }
   res.json({ success: true });
 });
 
@@ -197,10 +135,13 @@ app.post('/api/thread/:id/resolve', (req, res) => {
 app.delete('/api/thread/:id', (req, res) => {
   const { id } = req.params;
 
-  const thread = db.prepare('SELECT id FROM threads WHERE id = ?').get(id);
-  if (!thread) return res.status(404).json({ error: 'Thread not found' });
+  const documentId = threadIndex.get(id);
+  if (!documentId) return res.status(404).json({ error: 'Thread not found' });
 
-  db.prepare('DELETE FROM threads WHERE id = ?').run(id);
+  if (!store.deleteThread(documentId, id)) {
+    return res.status(404).json({ error: 'Thread not found' });
+  }
+  threadIndex.delete(id);
   res.json({ success: true });
 });
 
@@ -209,5 +150,5 @@ app.delete('/api/thread/:id', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`CORS: ${ALLOWED_ORIGINS}`);
-  console.log(`DB: ${DB_PATH}`);
+  console.log(`Data: ${path.resolve(process.env.DATA_DIR || path.join(__dirname, 'data'))}`);
 });
