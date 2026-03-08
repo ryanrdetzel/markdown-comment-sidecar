@@ -5,13 +5,14 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
-COPY server.js build.js ./
+COPY server.js ./
 COPY lib/ ./lib/
 COPY public/ ./public/
 COPY sample.md ./
 
-# Mount /app/docs for markdown files with sidecar comment files
-VOLUME /app/docs
+# Persistent comment storage
+VOLUME /app/data
+ENV DATA_DIR=/app/data
 
 EXPOSE 3000
 
