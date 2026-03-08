@@ -1,15 +1,34 @@
 const express = require('express');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { marked } = require('marked');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const store = require('./lib/sidecar-store').init(
   process.env.DATA_DIR || path.join(__dirname, 'data')
 );
 
+// Escape raw HTML blocks in markdown so injected HTML can't execute scripts.
+marked.use({
+  renderer: {
+    html({ raw }) {
+      return raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+  },
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '*';
+
+if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS === '*') {
+  console.error('FATAL: ALLOWED_ORIGINS must be set in production. Refusing to start.');
+  process.exit(1);
+}
+if (ALLOWED_ORIGINS === '*') {
+  console.warn('WARNING: ALLOWED_ORIGINS is not set — CORS is open to all origins. Set ALLOWED_ORIGINS in production.');
+}
 
 // In-memory indexes (populated when threads are read)
 const threadIndex = new Map();  // threadId → documentId
@@ -30,7 +49,22 @@ const corsOptions = ALLOWED_ORIGINS === '*'
   ? { origin: '*' }
   : { origin: ALLOWED_ORIGINS.split(',').map(s => s.trim()) };
 
+const commentLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
 app.use(cors(corsOptions));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -49,7 +83,7 @@ app.get('/api/document', (req, res) => {
     res.json({ html, markdown, threads });
   } catch (err) {
     console.error('GET /api/document error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -64,21 +98,42 @@ app.get('/api/threads', (req, res) => {
     res.json({ threads });
   } catch (err) {
     console.error('GET /api/threads error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // POST /api/comment — creates a new thread
-app.post('/api/comment', (req, res) => {
+app.post('/api/comment', commentLimiter, (req, res) => {
   const { documentId, text, author, elementType, elementIndex, elementText, selectedText } = req.body;
+
+  const VALID_ELEMENT_TYPES = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'li', 'blockquote', 'td', 'th']);
 
   if (!documentId || !text || !elementType || elementIndex == null) {
     return res.status(400).json({ error: 'documentId, text, elementType, and elementIndex are required' });
   }
+  if (!VALID_ELEMENT_TYPES.has(elementType)) {
+    return res.status(400).json({ error: 'Invalid elementType' });
+  }
+  if (!Number.isInteger(elementIndex) || elementIndex < 0) {
+    return res.status(400).json({ error: 'elementIndex must be a non-negative integer' });
+  }
+
+  if (typeof text !== 'string' || text.length > 5000) {
+    return res.status(400).json({ error: 'text must be a string under 5000 characters' });
+  }
+  if (author != null && (typeof author !== 'string' || author.length > 60)) {
+    return res.status(400).json({ error: 'author must be a string under 60 characters' });
+  }
+  if (elementText != null && (typeof elementText !== 'string' || elementText.length > 200)) {
+    return res.status(400).json({ error: 'elementText must be a string under 200 characters' });
+  }
+  if (selectedText != null && (typeof selectedText !== 'string' || selectedText.length > 500)) {
+    return res.status(400).json({ error: 'selectedText must be a string under 500 characters' });
+  }
 
   const now = new Date().toISOString();
-  const threadId = `thread_${Date.now()}`;
-  const messageId = `${threadId}_m0`;
+  const threadId = crypto.randomUUID();
+  const messageId = crypto.randomUUID();
 
   const thread = {
     id: threadId,
@@ -104,10 +159,17 @@ app.post('/api/comment', (req, res) => {
 });
 
 // POST /api/thread/:id/reply
-app.post('/api/thread/:id/reply', (req, res) => {
+app.post('/api/thread/:id/reply', commentLimiter, (req, res) => {
   const { id } = req.params;
   const { text, author } = req.body;
   if (!text) return res.status(400).json({ error: 'text is required' });
+
+  if (typeof text !== 'string' || text.length > 5000) {
+    return res.status(400).json({ error: 'text must be a string under 5000 characters' });
+  }
+  if (author != null && (typeof author !== 'string' || author.length > 60)) {
+    return res.status(400).json({ error: 'author must be a string under 60 characters' });
+  }
 
   const documentId = threadIndex.get(id);
   if (!documentId) return res.status(404).json({ error: 'Thread not found' });
@@ -116,7 +178,7 @@ app.post('/api/thread/:id/reply', (req, res) => {
   const thread = threads.find(t => t.id === id);
   if (!thread) return res.status(404).json({ error: 'Thread not found' });
 
-  const messageId = `${id}_m${thread.messages.length}`;
+  const messageId = crypto.randomUUID();
   const now = new Date().toISOString();
   const message = { id: messageId, text, author: author || null, createdAt: now };
 
@@ -129,6 +191,10 @@ app.post('/api/thread/:id/reply', (req, res) => {
 app.post('/api/thread/:id/resolve', (req, res) => {
   const { id } = req.params;
   const { comment } = req.body;
+
+  if (comment != null && (typeof comment !== 'string' || comment.length > 500)) {
+    return res.status(400).json({ error: 'comment must be a string under 500 characters' });
+  }
 
   const documentId = threadIndex.get(id);
   if (!documentId) return res.status(404).json({ error: 'Thread not found' });
@@ -158,6 +224,9 @@ app.put('/api/message/:id', (req, res) => {
   const { id } = req.params;
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'text is required' });
+  if (typeof text !== 'string' || text.length > 5000) {
+    return res.status(400).json({ error: 'text must be a string under 5000 characters' });
+  }
 
   const entry = messageIndex.get(id);
   if (!entry) return res.status(404).json({ error: 'Message not found' });

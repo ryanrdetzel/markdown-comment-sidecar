@@ -16,6 +16,16 @@
 const fs = require("fs");
 const path = require("path");
 const { marked } = require("marked");
+
+// Escape raw HTML blocks so injected HTML can't execute scripts.
+marked.use({
+  renderer: {
+    html({ raw }) {
+      return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    },
+  },
+});
+
 const {
   parseFrontmatter,
   makeDocumentId,
@@ -70,6 +80,11 @@ function parseArgs() {
 
 // ─── HTML template ────────────────────────────────────────────────────────────
 
+// Escape </script> sequences so embedded content can't break out of a script tag.
+function escapeScriptContent(str) {
+  return str.replace(/<\/script/gi, '<\\/script');
+}
+
 function generateHtml({
   title,
   documentId,
@@ -78,7 +93,7 @@ function generateHtml({
   markdown,
   html,
 }) {
-  const configJson = JSON.stringify({ serverUrl, documentId });
+  const configJson = escapeScriptContent(JSON.stringify({ serverUrl, documentId }));
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -160,7 +175,7 @@ ${html}
   </div>
 
   <!-- Raw markdown source for the markdown view toggle -->
-  <script type="text/plain" id="markdown-source">${markdown}</script>
+  <script type="text/plain" id="markdown-source">${escapeScriptContent(markdown)}</script>
 
   <script>window.SIDECAR_CONFIG = ${configJson};</script>
   <script src="${assetsUrl}/app.js"></script>
@@ -173,7 +188,8 @@ function escapeHtml(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // ─── Build ────────────────────────────────────────────────────────────────────
