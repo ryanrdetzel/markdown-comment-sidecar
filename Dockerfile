@@ -8,7 +8,6 @@ RUN npm ci --omit=dev
 COPY server.js ./
 COPY lib/ ./lib/
 COPY public/ ./public/
-COPY sample.md ./
 
 # Persistent comment storage
 VOLUME /app/data

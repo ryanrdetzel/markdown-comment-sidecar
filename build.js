@@ -58,7 +58,7 @@ function parseArgs() {
 // ─── HTML template ────────────────────────────────────────────────────────────
 
 function generateHtml({ title, documentId, serverUrl, assetsUrl, markdown, html }) {
-  const configJson = JSON.stringify({ serverUrl, documentId, markdown, html });
+  const configJson = JSON.stringify({ serverUrl, documentId });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -93,7 +93,9 @@ function generateHtml({ title, documentId, serverUrl, assetsUrl, markdown, html 
 
   <div class="layout">
     <div class="doc-pane">
-      <div class="doc-content" id="doc-content">Loading...</div>
+      <div class="doc-content" id="doc-content">
+${html}
+      </div>
     </div>
 
     <div class="sidebar-resizer" id="sidebar-resizer"></div>
@@ -138,6 +140,9 @@ function generateHtml({ title, documentId, serverUrl, assetsUrl, markdown, html 
       </div>
     </div>
   </div>
+
+  <!-- Raw markdown source for the markdown view toggle -->
+  <script type="text/plain" id="markdown-source">${markdown}</script>
 
   <script>window.SIDECAR_CONFIG = ${configJson};</script>
   <script src="${assetsUrl}/app.js"></script>

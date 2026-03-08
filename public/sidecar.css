@@ -306,9 +306,7 @@ header span { opacity: 0.5; font-weight: 400; }
 
 .md-source mark.cmt-highlight:hover { background: var(--mark-hover-bg); }
 .md-source mark.cmt-highlight.active { background: var(--mark-hover-bg); box-shadow: 0 0 0 2px var(--mark-active-shadow); }
-.md-source mark.cmt-highlight.resolved { background: #dcfce7; border-bottom-color: #16a34a; }
-.md-source mark.cmt-highlight.resolved:hover { background: #bbf7d0; }
-.md-source mark.cmt-highlight.resolved.active { background: #bbf7d0; box-shadow: 0 0 0 2px #16a34a; }
+
 
 .layout {
   display: flex;
@@ -455,10 +453,7 @@ header span { opacity: 0.5; font-weight: 400; }
 .cmt-block-highlight.cmt-block-active::before { opacity: 1; width: 3px; }
 .cmt-block-highlight.cmt-block-active::after { opacity: 1; }
 
-.cmt-block-highlight.cmt-block-resolved::before { background: #16a34a; }
-.cmt-block-highlight.cmt-block-resolved::after { color: #16a34a; }
-.cmt-block-highlight.cmt-block-resolved:hover { background: rgba(22, 163, 74, 0.07); }
-.cmt-block-highlight.cmt-block-resolved.cmt-block-active { background: rgba(22, 163, 74, 0.11); }
+
 
 /* For list items, the default left:-16px bar lands on the bullet marker.
    Shift both the bar and count badge further left to clear it. */
@@ -803,17 +798,12 @@ li.cmt-block-highlight::after  { left: -46px; }
 
 .sidebar-tab.active .tab-count { background: var(--accent-light); color: var(--accent-text); }
 
-/* Resolved highlight handled by .cmt-block-highlight.cmt-block-resolved above */
-
-/* Resolved thread card */
-.comment-card.resolved { border-color: #d1fae5; background: #f0fdf4; }
-.comment-card.resolved:hover { border-color: #6ee7b7; }
 
 .resolved-badge {
   font-size: 10px;
   font-weight: 700;
-  color: #16a34a;
-  background: #dcfce7;
+  color: var(--accent-text);
+  background: var(--accent-light);
   border-radius: 10px;
   padding: 1px 7px;
   margin-left: auto;
@@ -823,13 +813,13 @@ li.cmt-block-highlight::after  { left: -46px; }
 
 /* Resolved banner inside thread view */
 .resolved-banner {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--author-bar-bg);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
   margin: 0 12px 8px;
   font-size: 12px;
-  color: #15803d;
+  color: var(--doc-color);
 }
 
 .resolved-banner strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }

@@ -1,5 +1,6 @@
 // ─── Config ───────────────────────────────────────────────────────────────────
-// In static-site mode, window.SIDECAR_CONFIG is injected by the build step.
+// In static-site mode, window.SIDECAR_CONFIG carries only serverUrl + documentId.
+// HTML is rendered directly in #doc-content; markdown is in #markdown-source.
 // In local dev mode, we fall back to same-origin with documentId 'local'.
 
 const config = window.SIDECAR_CONFIG || {
@@ -250,9 +251,11 @@ function escapeHtml(str) {
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
 async function load() {
-  if (window.SIDECAR_CONFIG && window.SIDECAR_CONFIG.markdown) {
-    state.markdown = window.SIDECAR_CONFIG.markdown;
-    state.html = window.SIDECAR_CONFIG.html || '';
+  const markdownEl = document.getElementById('markdown-source');
+  if (markdownEl) {
+    // Static build: markdown is embedded in the page, HTML is already in the DOM
+    state.markdown = markdownEl.textContent;
+    state.html = docContent.innerHTML;
   } else {
     const res = await fetch(apiUrl(`/api/document?documentId=${encodeURIComponent(config.documentId)}`));
     const data = await res.json();
@@ -509,14 +512,6 @@ function buildThreadCard(thread) {
       renderThreadList();
     };
     footer.appendChild(collapseBtn);
-
-    if (!thread.resolved) {
-      const delBtn = document.createElement('button');
-      delBtn.className = 'btn-delete-thread';
-      delBtn.textContent = 'Delete thread';
-      delBtn.onclick = (e) => { e.stopPropagation(); deleteThread(thread.id); };
-      footer.appendChild(delBtn);
-    }
 
     card.appendChild(footer);
 
