@@ -186,6 +186,9 @@ function escapeHtml(str) {
 // ─── Build ────────────────────────────────────────────────────────────────────
 
 function buildFile(filePath, opts) {
+  if (!filePath.endsWith(".md")) {
+    return null;
+  }
   const { inputDir, outputDir, serverUrl, siteId, assetsUrl } = opts;
   const raw = fs.readFileSync(filePath, "utf8");
   const { data, content } = parseFrontmatter(raw);
@@ -248,6 +251,7 @@ function build(args) {
   const opts = { inputDir, outputDir, serverUrl: server, siteId, assetsUrl };
   for (const f of files) {
     const result = buildFile(f, opts);
+    if (!result) continue;
     const relOut = path.relative(process.cwd(), result.outPath);
     console.log(
       `  ${path.relative(process.cwd(), f)} → ${relOut}  [${result.documentId}]`,
