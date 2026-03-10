@@ -383,6 +383,35 @@ header span {
 
 /* ── Markdown content styles ─────────────────────────────────────────────── */
 
+.doc-content h1,
+.doc-content h2,
+.doc-content h3,
+.doc-content h4,
+.doc-content h5,
+.doc-content h6 {
+  position: relative;
+}
+
+.doc-content .heading-anchor {
+  opacity: 0;
+  margin-left: 0.4em;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-weight: normal;
+  font-size: 0.75em;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+.doc-content h1:hover .heading-anchor,
+.doc-content h2:hover .heading-anchor,
+.doc-content h3:hover .heading-anchor,
+.doc-content h4:hover .heading-anchor,
+.doc-content h5:hover .heading-anchor,
+.doc-content h6:hover .heading-anchor {
+  opacity: 1;
+}
+
 .doc-content h1 {
   font-size: 1.9em;
   font-weight: 700;
