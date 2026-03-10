@@ -31,6 +31,14 @@ The document itself is never touched. All comment data lives in a separate datab
 - [API Reference](api.html) — all endpoints documented
 - [Deployment](deployment.html) — self-host the comment server, deploy docs to GitHub Pages
 
+## Reference
+
+- [Reference](reference/index.html) — configuration options and CLI reference
+
+## Guides
+
+- [Guides](guides/index.html) — step-by-step guides for Docker and GitHub Pages deployment
+
 
 ---
 Ignore this line, it's for tests
