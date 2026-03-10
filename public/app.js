@@ -237,6 +237,14 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 }
 
+function scrollToHash() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  const id = hash.slice(1);
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
 async function load() {
@@ -280,6 +288,13 @@ function renderPreviewView() {
   docContent.innerHTML = state.html;
   highlightThreads();
   addBtn.style.display = 'none';
+
+  // Prevent heading anchor clicks from triggering comment handlers on the heading element
+  docContent.querySelectorAll('.heading-anchor').forEach(a => {
+    a.addEventListener('click', e => e.stopPropagation());
+  });
+
+  scrollToHash();
 }
 
 // Apply block-level highlights to the rendered preview.
@@ -1184,6 +1199,8 @@ document.addEventListener('mouseup', () => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+
+window.addEventListener('hashchange', scrollToHash);
 
 initTheme();
 initSidebar();
