@@ -438,6 +438,25 @@ app.put('/api/message/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+const ALLOWED_REACTIONS = new Set(['👍', '✅', '💯', '❤️', '👀', '🎉']);
+
+// POST /api/message/:id/react
+app.post('/api/message/:id/react', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const { emoji, documentId, threadId } = req.body;
+
+  if (!emoji || !documentId || !threadId) {
+    return res.status(400).json({ error: 'emoji, documentId, and threadId are required' });
+  }
+  if (!ALLOWED_REACTIONS.has(emoji)) {
+    return res.status(400).json({ error: 'Invalid emoji' });
+  }
+
+  const reactions = store.reactToMessage(documentId, threadId, id, emoji, req.user.sub);
+  if (reactions === null) return res.status(404).json({ error: 'Message not found' });
+  res.json({ reactions });
+});
+
 // DELETE /api/message/:id — delete a single message (deletes thread if last message)
 app.delete('/api/message/:id', requireAuth, (req, res) => {
   const { id } = req.params;

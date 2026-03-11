@@ -490,9 +490,64 @@ function buildMessageBubble(msg, threadId) {
     meta.appendChild(actions);
   }
 
-  bubble.appendChild(text);
+  // Reactions row (only rendered when there are chips)
+  const reactionMap = msg.reactions || {};
+  const hasReactions = Object.values(reactionMap).some(u => u.length > 0);
+
+  if (hasReactions) {
+    const reactions = document.createElement('div');
+    reactions.className = 'message-reactions';
+
+    Object.entries(reactionMap).forEach(([emoji, users]) => {
+      if (!users.length) return;
+      const chip = document.createElement('button');
+      chip.className = 'reaction-chip' + (currentUser && users.includes(currentUser.sub) ? ' reacted' : '');
+      chip.textContent = emoji + ' ' + users.length;
+      chip.title = users.join(', ');
+      chip.onclick = (e) => { e.stopPropagation(); reactToMessage(msg.id, emoji, threadId); };
+      reactions.appendChild(chip);
+    });
+
+    bubble.appendChild(text);
+    bubble.appendChild(reactions);
+  } else {
+    bubble.appendChild(text);
+  }
+
+  // Wrap bubble + add-reaction button together
+  const wrap = document.createElement('div');
+  wrap.className = 'message-bubble-wrap';
+  wrap.appendChild(bubble);
+
+  if (currentUser && threadId) {
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-reaction-btn';
+    addBtn.textContent = '☺';
+    addBtn.onclick = (e) => {
+      e.stopPropagation();
+      const existing = wrap.querySelector('.emoji-picker');
+      if (existing) { existing.remove(); return; }
+      const picker = document.createElement('div');
+      picker.className = 'emoji-picker';
+      ['👍', '✅', '💯', '❤️', '👀', '🎉'].forEach(em => {
+        const btn = document.createElement('button');
+        btn.textContent = em;
+        btn.onclick = (ev) => {
+          ev.stopPropagation();
+          picker.remove();
+          reactToMessage(msg.id, em, threadId);
+        };
+        picker.appendChild(btn);
+      });
+      wrap.appendChild(picker);
+      const close = (ev) => { if (!picker.contains(ev.target)) { picker.remove(); document.removeEventListener('click', close); } };
+      setTimeout(() => document.addEventListener('click', close), 0);
+    };
+    wrap.appendChild(addBtn);
+  }
+
   bubble.appendChild(meta);
-  return bubble;
+  return wrap;
 }
 
 function showMessageEditForm(msg, _threadId, bubble, textEl) {
@@ -968,6 +1023,20 @@ async function resolveThread(threadId, comment) {
   state.sidebarMode = 'list';
   state.expandedThreadIds.delete(threadId);
   await load();
+}
+
+async function reactToMessage(messageId, emoji, threadId) {
+  const res = await fetch(apiUrl(`/api/message/${messageId}/react`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    credentials: 'include',
+    body: JSON.stringify({ emoji, documentId: config.documentId, threadId }),
+  });
+  const data = await res.json();
+  const thread = state.threads.find(t => t.id === threadId);
+  const msg = thread?.messages.find(m => m.id === messageId);
+  if (msg) msg.reactions = data.reactions;
+  renderSidebar();
 }
 
 async function deleteThread(id) {

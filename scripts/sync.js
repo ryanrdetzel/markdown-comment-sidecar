@@ -6,7 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { parseFrontmatter, makeDocumentId, findMarkdownFiles } = require('./lib/document-id');
+const { parseFrontmatter, makeDocumentId, findMarkdownFiles } = require('../lib/document-id');
 
 function parseArgs() {
   const args = process.argv.slice(2);

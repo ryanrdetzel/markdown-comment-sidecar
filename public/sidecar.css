@@ -809,12 +809,16 @@ li.cmt-block-highlight::after {
   font-style: italic;
 }
 
+.message-bubble-wrap {
+  position: relative;
+  margin: 0 12px 8px;
+}
+
 .message-bubble {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 10px 12px;
-  margin: 0 12px 8px;
 }
 
 .message-bubble .message-text {
@@ -859,6 +863,100 @@ li.cmt-block-highlight::after {
 .message-bubble:hover .message-actions {
   opacity: 1;
   pointer-events: auto;
+}
+
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  position: relative;
+}
+
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--doc-color);
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.reaction-chip:hover {
+  border-color: var(--accent);
+}
+
+.reaction-chip.reacted {
+  background: color-mix(in srgb, var(--card-border) 30%, transparent);
+  border-color: var(--card-border);
+}
+
+.add-reaction-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 15px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  line-height: 1;
+  transition: opacity 0.15s, border-color 0.1s;
+  opacity: 0;
+  pointer-events: none;
+  padding: 0;
+}
+
+.message-bubble-wrap:hover .add-reaction-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.add-reaction-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.emoji-picker {
+  position: absolute;
+  top: 0;
+  right: 36px;
+  display: flex;
+  gap: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 100;
+}
+
+.emoji-picker button {
+  font-size: 18px;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.1s;
+}
+
+.emoji-picker button:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .msg-action-link {
