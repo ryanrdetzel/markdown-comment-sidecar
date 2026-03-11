@@ -230,7 +230,7 @@ header {
   flex-shrink: 0;
 }
 
-header span {
+header > span:not(.site-logo) {
   opacity: 0.5;
   font-weight: 400;
 }

@@ -274,9 +274,13 @@ function buildBreadcrumbs(outputDir, currentPath) {
   return crumbs;
 }
 
-function renderBreadcrumbs(crumbs) {
+function renderBreadcrumbs(crumbs, selfHref) {
   if (!crumbs.length) return "";
-  const items = crumbs.map((c) => `<a href="${escapeHtml(c.href)}">${escapeHtml(c.label)}</a>`);
+  const items = crumbs.map((c) =>
+    c.href === selfHref
+      ? `<span>${escapeHtml(c.label)}</span>`
+      : `<a href="${escapeHtml(c.href)}">${escapeHtml(c.label)}</a>`
+  );
   return `<nav class="breadcrumbs">${items.join(" <span class=\"breadcrumb-sep\">/</span> ")}</nav>`;
 }
 
@@ -303,7 +307,7 @@ function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs, logo, searc
           <div class="index-card__arrow">&#x2192;</div>
         </a>`).join("");
 
-  const breadcrumbHtml = renderBreadcrumbs(breadcrumbs);
+  const breadcrumbHtml = renderBreadcrumbs(breadcrumbs, "index.html");
   const indexLogoHref = "../".repeat(breadcrumbs ? breadcrumbs.length : 0) + "index.html";
   const logoHtml = logo ? `<span class="site-logo"><a href="${escapeHtml(indexLogoHref)}">${escapeHtml(logo)}</a></span>` : "";
 
@@ -518,7 +522,7 @@ function build(args) {
     path.join(outputDir, 'search-index.json'),
     JSON.stringify(searchIndex),
   );
-  console.log(`  [search] → search-index.json (${searchIndex.length} entries)`);
+  console.log(`  [search] → ${path.relative(process.cwd(), path.join(outputDir, 'search-index.json'))} (${searchIndex.length} entries)`);
 
   console.log(`\nDone. Output: ${outputDir}`);
   console.log(
