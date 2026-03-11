@@ -28,7 +28,7 @@ header {
   flex-shrink: 0;
 }
 
-header > span:not(.site-logo) {
+.header-title span {
   opacity: 0.5;
   font-weight: 400;
 }
@@ -1680,4 +1680,64 @@ li.cmt-block-highlight::after {
   opacity: 0.5;
   font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
   user-select: all;
+}
+
+/* === Mobile / Responsive === */
+@media (max-width: 768px) {
+  /* Compact header — hide non-essential items */
+  header {
+    padding: 8px 12px;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  /* Hide title on mobile */
+  .header-title { display: none; }
+  .search-wrapper { display: none; }
+  .github-link { display: none; }
+  #author-display { display: none; }
+
+  /* Full-width doc pane, reduced padding */
+  .doc-pane { padding: 20px 16px; }
+
+  /* Hide resizer */
+  .sidebar-resizer { display: none !important; }
+
+  /* Sidebar becomes a fixed slide-in panel */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 85vw;
+    max-width: 360px;
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+  }
+
+  /* When sidebar is NOT collapsed on mobile = visible */
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+    width: 85vw !important;
+  }
+
+  /* Backdrop */
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 199;
+  }
+  .sidebar-backdrop.visible {
+    display: block;
+  }
+
+  /* Adjust comment gutter indicators */
+  .cmt-anchor::before { left: -8px; }
+  .cmt-anchor::after { left: -8px; top: -8px; }
+
+  /* Add Comment floating button positioning tweak */
+  #add-comment-btn { bottom: 16px; right: 16px; }
 }

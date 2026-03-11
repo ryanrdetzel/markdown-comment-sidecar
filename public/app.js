@@ -855,6 +855,7 @@ function openBlockThreads(ids) {
     btnSidebarToggle.title = 'Hide sidebar';
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
   }
+  updateMobileBackdrop();
 
   // Mark all threads on this block as active in the doc
   docContent.querySelectorAll('.cmt-block-highlight').forEach(el => {
@@ -880,6 +881,7 @@ function setActiveThread(id) {
     btnSidebarToggle.title = 'Hide sidebar';
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
   }
+  updateMobileBackdrop();
 
   const prevResolved = state.activeThreadId
     ? state.threads.find(t => t.id === state.activeThreadId)?.resolved
@@ -1053,6 +1055,7 @@ function openNewCommentForm() {
     btnSidebarToggle.title = 'Hide sidebar';
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
   }
+  updateMobileBackdrop();
 
   // Remove any existing new-comment form
   commentsList.querySelector('.new-comment-form')?.remove();
@@ -1184,6 +1187,23 @@ const btnSidebarToggle = document.getElementById('btn-sidebar-toggle');
 const SIDEBAR_WIDTH_KEY = 'sidecar_sidebar_width';
 const SIDEBAR_COLLAPSED_KEY = 'sidecar_sidebar_collapsed';
 
+function updateMobileBackdrop() {
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (!backdrop) return;
+  if (window.innerWidth <= 768 && !sidebar.classList.contains('collapsed')) {
+    backdrop.classList.add('visible');
+  } else {
+    backdrop.classList.remove('visible');
+  }
+}
+
+function closeSidebarMobile() {
+  sidebar.classList.add('collapsed');
+  document.getElementById('sidebar-backdrop')?.classList.remove('visible');
+  if (btnSidebarToggle) btnSidebarToggle.innerHTML = '&#x00AB;';
+  localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'true');
+}
+
 function initSidebar() {
   if (!sidebar || !sidebarResizer || !btnSidebarToggle) return;
   const collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
@@ -1195,6 +1215,17 @@ function initSidebar() {
     btnSidebarToggle.innerHTML = '&#x00AB;';
     btnSidebarToggle.title = 'Show sidebar';
   }
+
+  const backdrop = document.getElementById('sidebar-backdrop');
+  backdrop?.addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeSidebarMobile();
+  });
+
+  document.getElementById('doc-content')?.addEventListener('click', () => {
+    if (window.innerWidth <= 768 && !sidebar.classList.contains('collapsed')) {
+      closeSidebarMobile();
+    }
+  });
 }
 
 if (btnSidebarToggle) {
@@ -1213,6 +1244,7 @@ if (btnSidebarToggle) {
       btnSidebarToggle.title = 'Show sidebar';
       localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'true');
     }
+    updateMobileBackdrop();
   });
 }
 
