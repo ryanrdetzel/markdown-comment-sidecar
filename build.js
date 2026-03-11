@@ -16,6 +16,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { marked } = require("./lib/marked-config");
 
 const {
@@ -23,6 +24,19 @@ const {
   makeDocumentId,
   findMarkdownFiles,
 } = require("./lib/document-id");
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function contentHash(filePath) {
+  const data = fs.readFileSync(filePath);
+  return crypto.createHash("sha256").update(data).digest("hex").slice(0, 8);
+}
+
+function hashedAssetName(name, hash) {
+  const ext = path.extname(name);
+  const base = path.basename(name, ext);
+  return `${base}.${hash}${ext}`;
+}
 
 // ─── Args ─────────────────────────────────────────────────────────────────────
 
@@ -111,6 +125,7 @@ function generateHtml({
   breadcrumbs,
   logo,
   searchIndexUrl,
+  assets,
 }) {
   const configJson = escapeScriptContent(JSON.stringify({ serverUrl, documentId }));
   const breadcrumbHtml = renderBreadcrumbs(breadcrumbs || []);
@@ -118,6 +133,9 @@ function generateHtml({
   const logoHref = "../".repeat(breadcrumbs ? Math.max(0, breadcrumbs.length - 1) : 0) + "index.html";
   const logoHtml = logo ? `<span class="site-logo"><a href="${escapeHtml(logoHref)}">${escapeHtml(logo)}</a></span>` : "";
   const assetsBase = basePath || "";
+  const cssFile = (assets && assets["sidecar.css"]) || "sidecar.css";
+  const appJsFile = (assets && assets["app.js"]) || "app.js";
+  const searchJsFile = (assets && assets["search.js"]) || "search.js";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -125,7 +143,7 @@ function generateHtml({
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
-  <link rel="stylesheet" href="${assetsBase}/sidecar.css">
+  <link rel="stylesheet" href="${assetsBase}/${cssFile}">
   <script>(function(){var s=localStorage.getItem('sidecar_theme')||'classic';document.documentElement.setAttribute('data-theme',s);})();</script>
 </head>
 <body>
@@ -199,8 +217,8 @@ ${html}
 
   <script>window.SIDECAR_CONFIG = ${configJson};window.SEARCH_INDEX_URL = '${searchIndexUrl}';</script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
-  <script src="${assetsBase}/app.js"></script>
-  <script src="${assetsBase}/search.js"></script>
+  <script src="${assetsBase}/${appJsFile}"></script>
+  <script src="${assetsBase}/${searchJsFile}"></script>
 </body>
 </html>`;
 }
@@ -282,8 +300,10 @@ function renderBreadcrumbs(crumbs, selfHref) {
 
 // ─── Index page ───────────────────────────────────────────────────────────────
 
-function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, searchIndexUrl }) {
+function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, searchIndexUrl, assets }) {
   const assetsBase = basePath || "";
+  const cssFile = (assets && assets["sidecar.css"]) || "sidecar.css";
+  const searchJsFile = (assets && assets["search.js"]) || "search.js";
   const iconFolder = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
   const iconFile = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
 
@@ -315,7 +335,7 @@ function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, search
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
-  <link rel="stylesheet" href="${assetsBase}/sidecar.css">
+  <link rel="stylesheet" href="${assetsBase}/${cssFile}">
   <script>(function(){var s=localStorage.getItem('sidecar_theme')||'classic';document.documentElement.setAttribute('data-theme',s);})();</script>
 </head>
 <body>
@@ -344,13 +364,13 @@ function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, search
   </div>
   <script>window.SEARCH_INDEX_URL = '${searchIndexUrl}';</script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
-  <script src="${assetsBase}/search.js"></script>
+  <script src="${assetsBase}/${searchJsFile}"></script>
   <script>(function(){var el=document.getElementById('theme-select');if(el){el.value=localStorage.getItem('sidecar_theme')||'classic';el.addEventListener('change',function(){document.documentElement.setAttribute('data-theme',el.value);localStorage.setItem('sidecar_theme',el.value);});}})();</script>
 </body>
 </html>`;
 }
 
-function generateIndexPages(outputDir, builtFiles, basePath, logo) {
+function generateIndexPages(outputDir, builtFiles, basePath, logo, assets) {
   // Map from dirPath → [{ name, title, description }]
   const dirFiles = new Map();
 
@@ -411,7 +431,7 @@ function generateIndexPages(outputDir, builtFiles, basePath, logo) {
     const idepth = path.relative(outputDir, dirPath).split(path.sep).filter(Boolean).length;
     const searchIndexUrl = (idepth > 0 ? "../".repeat(idepth) : "") + "search-index.json";
 
-    const indexHtml = generateIndexHtml({ title: dirName, entries, basePath, breadcrumbs, logo, searchIndexUrl });
+    const indexHtml = generateIndexHtml({ title: dirName, entries, basePath, breadcrumbs, logo, searchIndexUrl, assets });
     fs.writeFileSync(indexPath, indexHtml);
 
     const relOut = path.relative(process.cwd(), indexPath);
@@ -425,7 +445,7 @@ function buildFile(filePath, opts) {
   if (!filePath.endsWith(".md")) {
     return null;
   }
-  const { inputDir, outputDir, serverUrl, siteId, basePath, logo } = opts;
+  const { inputDir, outputDir, serverUrl, siteId, basePath, logo, assets } = opts;
   const raw = fs.readFileSync(filePath, "utf8");
   const { data, content } = parseFrontmatter(raw);
 
@@ -468,6 +488,7 @@ function buildFile(filePath, opts) {
       breadcrumbs,
       logo,
       searchIndexUrl,
+      assets,
     }),
   );
 
@@ -495,18 +516,22 @@ function build(args) {
 
   console.log(`Building ${files.length} file(s)...`);
 
-  // Copy static assets into output so everything is self-contained
+  // Copy static assets into output with content-hashed filenames for cache busting
   const staticAssets = ['app.js', 'search.js', 'sidecar.css'];
   const publicDir = path.join(__dirname, 'public');
+  const assets = {};
   for (const asset of staticAssets) {
     const src = path.join(publicDir, asset);
     if (fs.existsSync(src)) {
-      fs.copyFileSync(src, path.join(outputDir, asset));
-      console.log(`  [asset]  → ${path.relative(process.cwd(), path.join(outputDir, asset))}`);
+      const hash = contentHash(src);
+      const destName = hashedAssetName(asset, hash);
+      fs.copyFileSync(src, path.join(outputDir, destName));
+      assets[asset] = destName;
+      console.log(`  [asset]  → ${path.relative(process.cwd(), path.join(outputDir, destName))}`);
     }
   }
 
-  const opts = { inputDir, outputDir, serverUrl: server, siteId, basePath, logo };
+  const opts = { inputDir, outputDir, serverUrl: server, siteId, basePath, logo, assets };
   const built = [];
   for (const f of files) {
     const result = buildFile(f, opts);
@@ -518,7 +543,7 @@ function build(args) {
     );
   }
 
-  generateIndexPages(outputDir, built, basePath, logo);
+  generateIndexPages(outputDir, built, basePath, logo, assets);
 
   // Generate search index
   const searchIndex = built.map(({ outPath, title, description, plainText }) => ({
