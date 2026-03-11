@@ -81,11 +81,6 @@ const sidebarHeader = document.getElementById('sidebar-header');
 const addBtn = document.getElementById('add-comment-btn');
 const replyArea = document.getElementById('reply-area');
 const replyInput = document.getElementById('reply-input');
-const modal = document.getElementById('comment-modal');
-const modalSelectedText = document.getElementById('modal-selected-text');
-const commentInput = document.getElementById('comment-input');
-const modalCancel = document.getElementById('modal-cancel');
-const modalSubmit = document.getElementById('modal-submit');
 const btnPreview = document.getElementById('btn-preview');
 const btnMarkdown = document.getElementById('btn-markdown');
 const authorDisplay = document.getElementById('author-display');
@@ -278,28 +273,8 @@ function renderView() {
 
 function renderPreviewView() {
   docContent.innerHTML = state.html;
-  injectHeadingAnchors();
   highlightThreads();
   addBtn.style.display = 'none';
-}
-
-function injectHeadingAnchors() {
-  docContent.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]').forEach(heading => {
-    const anchor = document.createElement('a');
-    anchor.className = 'heading-anchor';
-    anchor.href = '#' + heading.id;
-    anchor.title = 'Copy link to this section';
-    anchor.setAttribute('aria-label', 'Link to this section');
-    anchor.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z"/></svg>';
-    anchor.addEventListener('click', (e) => {
-      e.preventDefault();
-      const url = window.location.origin + window.location.pathname + window.location.search + '#' + heading.id;
-      history.pushState(null, '', '#' + heading.id);
-      navigator.clipboard?.writeText(url);
-      heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    heading.appendChild(anchor);
-  });
 }
 
 // Apply block-level highlights to the rendered preview.
@@ -416,18 +391,41 @@ function renderThreadList() {
   }
   sidebarHeader.appendChild(tabs);
 
+  // Preserve the new-comment form if it's open
+  const existingForm = commentsList.querySelector('.new-comment-form');
+
   if (shown.length === 0) {
     commentsList.innerHTML = `<div class="empty-state">${
       state.sidebarTab === 'resolved'
         ? 'No resolved threads yet.'
         : 'Select text in the document to add a comment.'
     }</div>`;
+    if (existingForm) {
+      commentsList.innerHTML = '';
+      commentsList.appendChild(existingForm);
+    }
     return;
   }
 
   commentsList.innerHTML = '';
   for (const thread of shown) {
     commentsList.appendChild(buildThreadCard(thread));
+  }
+
+  if (existingForm && state.selection) {
+    // Insert form at the position matching where the new thread will land in doc order
+    const allEls = Array.from(docContent.querySelectorAll('*'));
+    const selEl = docContent.querySelectorAll(state.selection.elementType)[state.selection.elementIndex];
+    const selPos = selEl ? allEls.indexOf(selEl) : -1;
+    const cards = Array.from(commentsList.children);
+    const insertBefore = cards.find(card => {
+      const threadId = card.dataset.id;
+      const thread = shown.find(t => t.id === threadId);
+      if (!thread) return false;
+      const el = findElementByAnchor(thread.anchor);
+      return el && allEls.indexOf(el) > selPos;
+    });
+    commentsList.insertBefore(existingForm, insertBefore || null);
   }
 }
 
@@ -971,7 +969,7 @@ async function deleteThread(id) {
 // ─── Selection handling ───────────────────────────────────────────────────────
 
 document.addEventListener('mouseup', (e) => {
-  if (e.target === addBtn || modal.contains(e.target)) return;
+  if (e.target === addBtn || commentsList.querySelector('.new-comment-form')?.contains(e.target)) return;
 
   // Comment creation is only supported in preview view.
   // Markdown view is read-only for annotations — switch to preview to comment.
@@ -1042,53 +1040,84 @@ document.addEventListener('mouseup', (e) => {
 addBtn.addEventListener('click', () => {
   if (!state.selection) return;
   addBtn.style.display = 'none';
-  openCommentModal();
+  openNewCommentForm();
 });
 
-function openCommentModal() {
-  // Show the selected words as context in the modal
-  modalSelectedText.textContent = state.selection.selectedText || state.selection.elementText;
+function openNewCommentForm() {
+  // Ensure sidebar is visible
+  if (sidebar && sidebar.classList.contains('collapsed')) {
+    sidebar.classList.remove('collapsed');
+    sidebarResizer.classList.remove('hidden');
+    btnSidebarToggle.innerHTML = '&#x00BB;';
+    btnSidebarToggle.title = 'Hide sidebar';
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
+  }
 
-  // Show a note if the selection was trimmed to a single block
-  const existingNote = modal.querySelector('.cross-block-note');
-  if (existingNote) existingNote.remove();
+  // Remove any existing new-comment form
+  commentsList.querySelector('.new-comment-form')?.remove();
+
+  const form = document.createElement('div');
+  form.className = 'new-comment-form';
+
+  // Selected text context
+  const quote = document.createElement('div');
+  quote.className = 'new-comment-quote';
+  quote.textContent = state.selection.selectedText || state.selection.elementText;
+  form.appendChild(quote);
+
   if (state.selection.crossBlock) {
     const note = document.createElement('div');
     note.className = 'cross-block-note';
     note.textContent = 'Selection trimmed to one section — comments are per block.';
-    modalSelectedText.after(note);
+    form.appendChild(note);
   }
 
-  commentInput.value = '';
-  modal.classList.add('open');
-  commentInput.focus();
+  const ta = document.createElement('textarea');
+  ta.placeholder = 'Add a comment…';
+  ta.rows = 3;
+  form.appendChild(ta);
+
+  const actions = document.createElement('div');
+  actions.className = 'new-comment-actions';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = () => closeNewCommentForm();
+
+  const submitBtn = document.createElement('button');
+  submitBtn.className = 'btn-submit';
+  submitBtn.textContent = 'Comment';
+  submitBtn.onclick = () => submitNewComment(ta, submitBtn);
+
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitNewComment(ta, submitBtn);
+    if (e.key === 'Escape') closeNewCommentForm();
+  });
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(submitBtn);
+  form.appendChild(actions);
+
+  // Temporarily append so renderThreadList can find and position it correctly
+  commentsList.appendChild(form);
+  renderThreadList();
+  ta.focus();
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
-
-modalCancel.addEventListener('click', closeModal);
-modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-
-function closeModal() {
-  modal.classList.remove('open');
-  commentInput.value = '';
+function closeNewCommentForm() {
+  commentsList.querySelector('.new-comment-form')?.remove();
+  state.selection = null;
   window.getSelection()?.removeAllRanges();
 }
 
-commentInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitComment();
-  if (e.key === 'Tab') { e.preventDefault(); modalSubmit.focus(); }
-});
-
-modalSubmit.addEventListener('click', submitComment);
-
-async function submitComment() {
-  const text = commentInput.value.trim();
+async function submitNewComment(ta, submitBtn) {
+  const text = ta.value.trim();
   if (!text || !state.selection) return;
 
   const { elementType, elementIndex, elementText, selectedText } = state.selection;
 
-  modalSubmit.disabled = true;
+  submitBtn.disabled = true;
   try {
     const res = await fetch(apiUrl('/api/comment'), {
       method: 'POST',
@@ -1105,14 +1134,26 @@ async function submitComment() {
     });
     if (!res.ok) throw new Error('Failed to save comment');
     const data = await res.json();
-    closeModal();
-    state.selection = null;
+    closeNewCommentForm();
     await load();
     openThread(data.thread.id);
   } finally {
-    modalSubmit.disabled = false;
+    submitBtn.disabled = false;
   }
 }
+
+// ─── Heading anchor clicks (copy link + smooth scroll) ────────────────────────
+
+docContent.addEventListener('click', (e) => {
+  const anchor = e.target.closest('a.heading-anchor');
+  if (!anchor) return;
+  e.preventDefault();
+  const id = anchor.getAttribute('href').slice(1);
+  const url = window.location.origin + window.location.pathname + window.location.search + '#' + id;
+  history.pushState(null, '', '#' + id);
+  navigator.clipboard?.writeText(url);
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 // ─── View toggle ──────────────────────────────────────────────────────────────
 

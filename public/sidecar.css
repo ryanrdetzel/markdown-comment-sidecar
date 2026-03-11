@@ -1451,8 +1451,57 @@ li.cmt-block-highlight::after {
   border-top: 1px solid var(--border);
 }
 
-/* Add comment modal */
-#comment-modal,
+/* New comment sidebar form */
+.new-comment-form {
+  background: var(--card-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.new-comment-quote {
+  background: var(--modal-selected-bg);
+  border-left: 3px solid var(--modal-selected-border);
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--modal-selected-color);
+  border-radius: 3px;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+.new-comment-form textarea {
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--doc-bg);
+  color: var(--doc-color);
+  resize: vertical;
+  min-height: 64px;
+  box-sizing: border-box;
+}
+
+.new-comment-form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.new-comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Name modal */
 #name-modal {
   position: fixed;
   inset: 0;
@@ -1463,7 +1512,6 @@ li.cmt-block-highlight::after {
   z-index: 200;
 }
 
-#comment-modal.open,
 #name-modal.open {
   display: flex;
 }

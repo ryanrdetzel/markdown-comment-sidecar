@@ -143,19 +143,6 @@ ${html}
 
   <button id="add-comment-btn">+ Add Comment</button>
 
-  <!-- Comment modal -->
-  <div id="comment-modal">
-    <div class="modal-box">
-      <h3>Add Comment</h3>
-      <div class="modal-selected-text" id="modal-selected-text"></div>
-      <textarea id="comment-input" placeholder="Write your comment..." rows="4"></textarea>
-      <div class="modal-actions">
-        <button class="btn-cancel" id="modal-cancel">Cancel</button>
-        <button class="btn-submit" id="modal-submit">Add Comment</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Name prompt modal -->
   <div id="name-modal">
     <div class="modal-box">
