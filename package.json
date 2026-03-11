@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "build": "node build.js",
+    "stamp": "node build.js --stamp",
     "sync": "node sync.js"
   },
   "dependencies": {

@@ -12,6 +12,8 @@
 //   --site-id    TOKEN  Stable salt for document IDs (required)
 //   --base-path  PATH   URL path prefix for the site root (e.g. /docs). Default: ""
 //   --logo       TEXT   Optional branding label shown top-left of every page
+//   --stamp             Write stable `id:` into each source file's frontmatter so
+//                       the document ID is preserved if the file is moved/renamed
 //   --watch             Re-build when input files change
 
 const fs = require("fs");
@@ -35,6 +37,7 @@ function parseArgs() {
     siteId: null,
     basePath: "",
     logo: null,
+    stamp: false,
     watch: false,
   };
 
@@ -46,6 +49,7 @@ function parseArgs() {
     if (args[i] === "--assets-url") { i++; /* ignored, assets are now bundled into output */ }
     if (args[i] === "--base-path") result.basePath = args[++i];
     if (args[i] === "--logo") result.logo = args[++i];
+    if (args[i] === "--stamp") result.stamp = true;
     if (args[i] === "--watch") result.watch = true;
   }
 
@@ -421,13 +425,44 @@ function generateIndexPages(outputDir, builtFiles, basePath, logo) {
 
 // ─── Build ────────────────────────────────────────────────────────────────────
 
+// stampFile writes `id: <documentId>` into a source file's frontmatter so the
+// document ID is stable even if the file is later moved or renamed.
+function stampFile(filePath, documentId) {
+  const raw = fs.readFileSync(filePath, "utf8");
+  const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+
+  let newContent;
+  if (fmMatch) {
+    const fmBody = fmMatch[1];
+    const after = raw.slice(fmMatch[0].length);
+    if (/^id:/m.test(fmBody)) {
+      // Replace the existing (non-pinned) id: line with the new hash.
+      const newFmBody = fmBody.replace(/^id:.*$/m, `id: ${documentId}`);
+      newContent = `---\n${newFmBody}\n---\n${after}`;
+    } else {
+      // Insert id: as the first field inside the existing frontmatter block.
+      newContent = raw.replace(/^---\r?\n/, `---\nid: ${documentId}\n`);
+    }
+  } else {
+    // Prepend a new frontmatter block before the document body.
+    newContent = `---\nid: ${documentId}\n---\n\n${raw}`;
+  }
+
+  fs.writeFileSync(filePath, newContent, "utf8");
+}
+
 function buildFile(filePath, opts) {
   if (!filePath.endsWith(".md")) {
     return null;
   }
-  const { inputDir, outputDir, serverUrl, siteId, basePath, logo } = opts;
+  const { inputDir, outputDir, serverUrl, siteId, basePath, logo, stamp } = opts;
   const raw = fs.readFileSync(filePath, "utf8");
   const { data, content } = parseFrontmatter(raw);
+
+  // A file's ID is "pinned" when the frontmatter already carries a stable
+  // 32-char hex ID.  Without a pinned ID, moving the file changes its ID and
+  // orphans any comments that are attached to it.
+  const isPinned = !!(data.id && /^[0-9a-f]{32}$/.test(data.id));
 
   const documentId = makeDocumentId(
     filePath,
@@ -435,6 +470,11 @@ function buildFile(filePath, opts) {
     siteId,
     data.id || null,
   );
+
+  if (stamp && !isPinned) {
+    stampFile(filePath, documentId);
+  }
+
   const html = marked.parse(content);
 
   // Title: frontmatter title, first H1 in markdown, or filename
@@ -472,11 +512,11 @@ function buildFile(filePath, opts) {
   );
 
   const plainText = extractPlainText(content).slice(0, 5000);
-  return { filePath, outPath, documentId, title, description, plainText };
+  return { filePath, outPath, documentId, title, description, plainText, isPinned };
 }
 
 function build(args) {
-  const { input, output, server, siteId, basePath, logo } = args;
+  const { input, output, server, siteId, basePath, logo, stamp } = args;
   const inputDir = path.resolve(input);
   const outputDir = path.resolve(output);
 
@@ -506,12 +546,14 @@ function build(args) {
     }
   }
 
-  const opts = { inputDir, outputDir, serverUrl: server, siteId, basePath, logo };
+  const opts = { inputDir, outputDir, serverUrl: server, siteId, basePath, logo, stamp };
   const built = [];
+  let unpinnedCount = 0;
   for (const f of files) {
     const result = buildFile(f, opts);
     if (!result) continue;
     built.push(result);
+    if (!result.isPinned) unpinnedCount++;
     const relOut = path.relative(process.cwd(), result.outPath);
     console.log(
       `  ${path.relative(process.cwd(), f)} → ${relOut}  [${result.documentId}]`,
@@ -537,6 +579,14 @@ function build(args) {
   console.log(
     `Site ID: ${siteId} (keep this stable — changing it reassigns all document IDs)`,
   );
+
+  if (stamp && unpinnedCount > 0) {
+    console.log(`\nStamped ${unpinnedCount} file(s) with a stable document ID.`);
+  } else if (!stamp && unpinnedCount > 0) {
+    console.warn(`\nWarning: ${unpinnedCount} file(s) have no pinned document ID.`);
+    console.warn(`If any of these files are moved or renamed, their comments will be lost.`);
+    console.warn(`Run with --stamp to embed stable IDs in each file's frontmatter.`);
+  }
 }
 
 // ─── Watch mode ───────────────────────────────────────────────────────────────
@@ -558,6 +608,7 @@ function watch(args) {
       siteId: args.siteId,
       basePath: args.basePath,
       logo: args.logo,
+      stamp: args.stamp,
     };
 
     try {
