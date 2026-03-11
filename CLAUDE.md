@@ -78,6 +78,7 @@ Flags:
 - `--server` — comment server base URL (required)
 - `--site-id` — stable salt for document IDs (required)
 - `--assets-url` — base URL for `sidecar.css` and `app.js` (required)
+- `--base-path` — URL path prefix for the site root (e.g. `/docs` if hosted at `example.com/docs`). Prefixes all search result URLs. Default: `""` (site at root)
 - `--logo` — optional branding label shown top-left of every page (links to root index)
 - `--watch` — rebuild on file changes
 

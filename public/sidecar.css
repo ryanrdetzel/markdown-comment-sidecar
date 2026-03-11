@@ -242,6 +242,15 @@ header span {
   gap: 8px;
 }
 
+.github-link {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.github-link:hover { opacity: 1; }
+
 /* ── Logo ────────────────────────────────────────────────────────────────── */
 
 .site-logo {

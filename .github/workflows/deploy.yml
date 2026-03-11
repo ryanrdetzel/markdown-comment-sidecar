@@ -38,7 +38,8 @@ jobs:
             --server https://comments.detz.dev \
             --site-id "$SITE_ID" \
             --assets-url https://comments.detz.dev \
-            --logo "Markdown Comments"
+            --logo "Markdown Comments" \ 
+            --base-path "/markdown-comment-sidecar"
           touch ./dist/.nojekyll
 
       - name: Upload Pages artifact
