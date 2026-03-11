@@ -37,7 +37,8 @@ jobs:
             --output ./dist \
             --server https://comments.detz.dev \
             --site-id "$SITE_ID" \
-            --assets-url https://comments.detz.dev
+            --assets-url https://comments.detz.dev \
+            --logo "Markdown Comments"
           touch ./dist/.nojekyll
 
       - name: Upload Pages artifact

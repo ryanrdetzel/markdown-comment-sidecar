@@ -11,6 +11,7 @@
 //   --server     URL    Comment server base URL (required)
 //   --site-id    TOKEN  Stable salt for document IDs (required)
 //   --assets-url URL    Base URL for sidecar.css and app.js (required)
+//   --logo       TEXT   Optional branding label shown top-left of every page
 //   --watch             Re-build when input files change
 
 const fs = require("fs");
@@ -33,6 +34,7 @@ function parseArgs() {
     server: null,
     siteId: null,
     assetsUrl: null,
+    logo: null,
     watch: false,
   };
 
@@ -42,6 +44,7 @@ function parseArgs() {
     if (args[i] === "--server") result.server = args[++i];
     if (args[i] === "--site-id") result.siteId = args[++i];
     if (args[i] === "--assets-url") result.assetsUrl = args[++i];
+    if (args[i] === "--logo") result.logo = args[++i];
     if (args[i] === "--watch") result.watch = true;
   }
 
@@ -105,9 +108,13 @@ function generateHtml({
   markdown,
   html,
   breadcrumbs,
+  logo,
+  searchIndexUrl,
 }) {
   const configJson = escapeScriptContent(JSON.stringify({ serverUrl, documentId }));
   const breadcrumbHtml = renderBreadcrumbs(breadcrumbs || []);
+  const logoHref = "../".repeat(breadcrumbs ? breadcrumbs.length : 0) + "index.html";
+  const logoHtml = logo ? `<span class="site-logo"><a href="${escapeHtml(logoHref)}">${escapeHtml(logo)}</a></span>` : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -116,10 +123,11 @@ function generateHtml({
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
   <link rel="stylesheet" href="${assetsUrl}/sidecar.css">
+  <script>(function(){var s=localStorage.getItem('sidecar_theme')||'classic';document.documentElement.setAttribute('data-theme',s);})();</script>
 </head>
 <body>
   <header>
-    <div class="search-wrapper">
+    ${logoHtml}<div class="search-wrapper">
       <input type="search" id="search-input" placeholder="Search docs..." autocomplete="off">
       <div id="search-results" class="search-results" hidden></div>
     </div>
@@ -183,7 +191,7 @@ ${html}
   <!-- Raw markdown source for the markdown view toggle -->
   <script type="text/plain" id="markdown-source">${escapeScriptContent(markdown)}</script>
 
-  <script>window.SIDECAR_CONFIG = ${configJson};</script>
+  <script>window.SIDECAR_CONFIG = ${configJson};window.SEARCH_INDEX_URL = '${searchIndexUrl}';</script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
   <script src="${assetsUrl}/app.js"></script>
   <script src="${assetsUrl}/search.js"></script>
@@ -264,7 +272,7 @@ function renderBreadcrumbs(crumbs) {
 
 // ─── Index page ───────────────────────────────────────────────────────────────
 
-function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs }) {
+function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs, logo, searchIndexUrl }) {
   const dirCards = entries.filter((e) => e.type === "dir").map((e) => `
         <a class="index-card index-card--dir" href="${escapeHtml(e.href)}">
           <div class="index-card__icon">&#x1F4C2;</div>
@@ -286,6 +294,8 @@ function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs }) {
         </a>`).join("");
 
   const breadcrumbHtml = renderBreadcrumbs(breadcrumbs);
+  const indexLogoHref = "../".repeat(breadcrumbs ? breadcrumbs.length : 0) + "index.html";
+  const logoHtml = logo ? `<span class="site-logo"><a href="${escapeHtml(indexLogoHref)}">${escapeHtml(logo)}</a></span>` : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -294,12 +304,22 @@ function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs }) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
   <link rel="stylesheet" href="${assetsUrl}/sidecar.css">
+  <script>(function(){var s=localStorage.getItem('sidecar_theme')||'classic';document.documentElement.setAttribute('data-theme',s);})();</script>
 </head>
 <body>
   <header class="index-header">
-    <div class="search-wrapper">
+    ${logoHtml}<div class="search-wrapper">
       <input type="search" id="search-input" placeholder="Search docs..." autocomplete="off">
       <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <div class="header-controls">
+      <select id="theme-select" class="theme-select" title="Change theme">
+        <option value="classic">Classic</option>
+        <option value="dark">Dark</option>
+        <option value="sepia">Sepia</option>
+        <option value="ocean">Ocean</option>
+        <option value="forest">Forest</option>
+      </select>
     </div>
   </header>
   <div class="index-page">
@@ -309,13 +329,15 @@ function generateIndexHtml({ title, entries, assetsUrl, breadcrumbs }) {
       ${dirCards || fileCards ? `<div class="index-grid">${dirCards}${fileCards}</div>` : "<p>No pages found.</p>"}
     </div>
   </div>
+  <script>window.SEARCH_INDEX_URL = '${searchIndexUrl}';</script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7/dist/fuse.min.js"></script>
   <script src="${assetsUrl}/search.js"></script>
+  <script>(function(){var el=document.getElementById('theme-select');if(el){el.value=localStorage.getItem('sidecar_theme')||'classic';el.addEventListener('change',function(){document.documentElement.setAttribute('data-theme',el.value);localStorage.setItem('sidecar_theme',el.value);});}})();</script>
 </body>
 </html>`;
 }
 
-function generateIndexPages(outputDir, builtFiles, assetsUrl) {
+function generateIndexPages(outputDir, builtFiles, assetsUrl, logo) {
   // Map from dirPath → [{ name, title, description }]
   const dirFiles = new Map();
 
@@ -340,7 +362,6 @@ function generateIndexPages(outputDir, builtFiles, assetsUrl) {
 
   for (const dirPath of allDirs) {
     const indexPath = path.join(dirPath, "index.html");
-    if (fs.existsSync(indexPath)) continue;
 
     const files = dirFiles.get(dirPath) || [];
 
@@ -374,7 +395,10 @@ function generateIndexPages(outputDir, builtFiles, assetsUrl) {
     const dirName = isRoot ? "Documentation" : slugToTitle(path.basename(dirPath));
     const breadcrumbs = buildBreadcrumbs(outputDir, dirPath);
 
-    const indexHtml = generateIndexHtml({ title: dirName, entries, assetsUrl, breadcrumbs });
+    const idepth = path.relative(outputDir, dirPath).split(path.sep).filter(Boolean).length;
+    const searchIndexUrl = (idepth > 0 ? "../".repeat(idepth) : "") + "search-index.json";
+
+    const indexHtml = generateIndexHtml({ title: dirName, entries, assetsUrl, breadcrumbs, logo, searchIndexUrl });
     fs.writeFileSync(indexPath, indexHtml);
 
     const relOut = path.relative(process.cwd(), indexPath);
@@ -388,7 +412,7 @@ function buildFile(filePath, opts) {
   if (!filePath.endsWith(".md")) {
     return null;
   }
-  const { inputDir, outputDir, serverUrl, siteId, assetsUrl } = opts;
+  const { inputDir, outputDir, serverUrl, siteId, assetsUrl, logo } = opts;
   const raw = fs.readFileSync(filePath, "utf8");
   const { data, content } = parseFrontmatter(raw);
 
@@ -415,6 +439,9 @@ function buildFile(filePath, opts) {
 
   const breadcrumbs = buildBreadcrumbs(outputDir, outPath);
 
+  const depth = path.relative(outputDir, path.dirname(outPath)).split(path.sep).filter(Boolean).length;
+  const searchIndexUrl = (depth > 0 ? "../".repeat(depth) : "") + "search-index.json";
+
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(
     outPath,
@@ -426,6 +453,8 @@ function buildFile(filePath, opts) {
       markdown: content,
       html,
       breadcrumbs,
+      logo,
+      searchIndexUrl,
     }),
   );
 
@@ -434,7 +463,7 @@ function buildFile(filePath, opts) {
 }
 
 function build(args) {
-  const { input, output, server, siteId, assetsUrl } = args;
+  const { input, output, server, siteId, assetsUrl, logo } = args;
   const inputDir = path.resolve(input);
   const outputDir = path.resolve(output);
 
@@ -453,7 +482,7 @@ function build(args) {
 
   console.log(`Building ${files.length} file(s)...`);
 
-  const opts = { inputDir, outputDir, serverUrl: server, siteId, assetsUrl };
+  const opts = { inputDir, outputDir, serverUrl: server, siteId, assetsUrl, logo };
   const built = [];
   for (const f of files) {
     const result = buildFile(f, opts);
@@ -465,7 +494,7 @@ function build(args) {
     );
   }
 
-  generateIndexPages(outputDir, built, assetsUrl);
+  generateIndexPages(outputDir, built, assetsUrl, logo);
 
   // Generate search index
   const searchIndex = built.map(({ outPath, title, description, plainText }) => ({
@@ -504,6 +533,7 @@ function watch(args) {
       serverUrl: args.server,
       siteId: args.siteId,
       assetsUrl: args.assetsUrl,
+      logo: args.logo,
     };
 
     try {

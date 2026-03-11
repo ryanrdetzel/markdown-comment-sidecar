@@ -7,11 +7,7 @@
   var loadPromise = null;
 
   function getSearchIndexUrl() {
-    var parts = window.location.pathname.split('/').filter(Boolean);
-    // depth = number of directory levels (parts minus the filename)
-    var depth = parts.length - 1;
-    var prefix = depth > 0 ? '../'.repeat(depth) : '';
-    return prefix + 'search-index.json';
+    return window.SEARCH_INDEX_URL || 'search-index.json';
   }
 
   function loadIndex() {

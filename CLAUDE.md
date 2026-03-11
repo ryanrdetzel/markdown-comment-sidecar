@@ -72,6 +72,15 @@ In dev mode (`npm start`), document ID defaults to `'local'`.
 node build.js --input ./docs --output ./dist --server http://localhost:3000 --site-id demo
 ```
 
+Flags:
+- `--input` — source markdown directory (default: `./docs`)
+- `--output` — output directory (default: `./dist`)
+- `--server` — comment server base URL (required)
+- `--site-id` — stable salt for document IDs (required)
+- `--assets-url` — base URL for `sidecar.css` and `app.js` (required)
+- `--logo` — optional branding label shown top-left of every page (links to root index)
+- `--watch` — rebuild on file changes
+
 `--site-id` is a secret salt. Keep it stable — changing it reassigns all document IDs and orphans existing comments.
 
 ## Frontend state
