@@ -1,4 +1,4 @@
-# markdown-comment-sidecar
+# SidecarDocs
 
 A proof-of-concept for adding threaded comments to markdown documents without touching the source files. Comments are stored as JSON sidecar files and anchored to document elements, so they survive edits to the surrounding text.
 

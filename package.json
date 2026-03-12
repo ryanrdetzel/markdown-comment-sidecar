@@ -1,5 +1,5 @@
 {
-  "name": "markdown-comment-sidecar",
+  "name": "sidecardocs",
   "version": "1.0.0",
   "description": "POC for commenting on markdown files without modifying source",
   "main": "server.js",

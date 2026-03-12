@@ -1398,7 +1398,7 @@ function renderNoIdWarning() {
       banner.appendChild(document.createTextNode(' to the frontmatter to pin its ID. '));
 
       const learnMore = document.createElement('a');
-      learnMore.href = 'https://ryanrdetzel.github.io/markdown-comment-sidecar/reference/document-ids.html';
+      learnMore.href = 'https://ryanrdetzel.github.io/SidecarDocs/reference/document-ids.html';
       learnMore.textContent = 'Learn more';
       learnMore.target = '_blank';
       learnMore.rel = 'noopener noreferrer';

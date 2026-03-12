@@ -77,7 +77,7 @@ app.get('/', (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown Comment Sidecar</title>
+  <title>SidecarDocs</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -122,9 +122,9 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <div class="card">
-    <h1>Markdown Comment Sidecar <span>POC</span></h1>
+    <h1>SidecarDocs <span>POC</span></h1>
     <p>Annotate markdown files with threaded comments — without touching the source file. Comments are anchored to document elements and stored in a sidecar database.</p>
-    <a class="repo" href="https://github.com/ryanrdetzel/markdown-comment-sidecar" target="_blank" rel="noopener">View on GitHub</a>
+    <a class="repo" href="https://github.com/ryanrdetzel/SidecarDocs" target="_blank" rel="noopener">View on GitHub</a>
   </div>
 </body>
 </html>`);
