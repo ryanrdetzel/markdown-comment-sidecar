@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // add-ids.js — scan a directory of markdown files and add `id:` to frontmatter
-// if the file doesn't already have one. The slug used matches the default
-// document ID algorithm so existing comments are not orphaned.
+// if the file doesn't already have one. A random 32-character hex string is
+// generated for each file — never a guessable slug.
 //
 // Usage:
 //   node scripts/add-ids.js --input ./docs [--dry-run]
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { parseFrontmatter, findMarkdownFiles } = require('../lib/document-id');
 
 // Common repo/meta markdown files that are not documentation pages and
@@ -91,20 +92,22 @@ function main() {
     }
 
     const relPath = path.relative(inputDir, filePath).replace(/\\/g, '/').replace(/\.md$/, '');
-    const slug = path.basename(relPath); // basename without .md
+    const basename = path.basename(relPath);
 
-    if (BLOCKLIST.has(slug.toUpperCase())) {
+    if (BLOCKLIST.has(basename.toUpperCase())) {
       console.log(`Skipped (blocklist): ${relPath}.md`);
       skipped++;
       continue;
     }
 
+    const hexId = crypto.randomBytes(16).toString('hex');
+
     if (args.dryRun) {
-      console.log(`[dry-run] Would add id: ${slug} to ${relPath}.md`);
+      console.log(`[dry-run] Would add id: ${hexId} to ${relPath}.md`);
     } else {
-      const updated_content = addIdToFrontmatter(raw, slug);
+      const updated_content = addIdToFrontmatter(raw, hexId);
       fs.writeFileSync(filePath, updated_content, 'utf8');
-      console.log(`Added id: ${slug} → ${relPath}.md`);
+      console.log(`Added id: ${hexId} → ${relPath}.md`);
     }
     updated++;
   }

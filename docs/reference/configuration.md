@@ -1,6 +1,6 @@
 ---
 title: Configuration
-id: configuration
+id: 48b2467dc2f0b317ed47254520b4c703
 ---
 
 # Configuration
@@ -52,11 +52,11 @@ You can override this with an `id` field in the document's YAML frontmatter.
 ```yaml
 ---
 title: My Document
-id: my-custom-slug
+id: a3f1c9e08b2d47e6f001234567890abc
 ---
 ```
 
-Short slugs are hashed with `--site-id`. A 32-character hex string is used as-is, which lets you pin an ID after renaming a file so existing comments are not orphaned.
+The value must be a 32-character hex string — this is used as-is and lets you pin an ID after renaming a file so existing comments are not orphaned.
 
 See [Document IDs](document-ids.html) for the full reference.
 

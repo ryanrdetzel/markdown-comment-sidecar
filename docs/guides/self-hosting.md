@@ -1,6 +1,6 @@
 ---
 title: Self-Hosting
-id: self-hosting
+id: 9754944d5b1a6d3855bac13c1c9dc0c5
 ---
 
 # Self-Hosting the Comment Server

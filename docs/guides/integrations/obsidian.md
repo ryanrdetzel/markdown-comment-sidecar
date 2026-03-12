@@ -1,6 +1,6 @@
 ---
 title: Obsidian Integration
-id: obsidian
+id: 9ae86364a1e9156b46f76014f856553e
 ---
 
 # Obsidian Integration
@@ -56,7 +56,7 @@ Obsidian frontmatter (YAML between `---` delimiters) is parsed by `build.js`. Th
 ```yaml
 ---
 title: My Note
-id: my-note-slug
+id: a3f1c9e08b2d47e6f001234567890abc
 tags: [documentation, example]
 ---
 ```

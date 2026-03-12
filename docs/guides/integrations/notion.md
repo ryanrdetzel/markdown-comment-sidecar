@@ -1,6 +1,6 @@
 ---
 title: Notion Export Integration
-id: notion
+id: 9a4a9eeda2f83a870453826443032845
 ---
 
 # Notion Export Integration
@@ -84,11 +84,11 @@ To prevent this, pin the document ID using frontmatter before the first export:
 ```yaml
 ---
 title: My Page
-id: my-page-pinned-id
+id: a3f1c9e08b2d47e6f001234567890abc
 ---
 ```
 
-Any 32-char hex string works as a pinned ID. Generate one with:
+Generate a 32-char hex ID with:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"

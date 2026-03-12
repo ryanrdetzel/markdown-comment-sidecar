@@ -1,6 +1,6 @@
 ---
 title: Custom Anchoring Strategies
-id: custom-anchoring
+id: 3b608d7df578a892c54f7e1c23111d8f
 ---
 
 # Custom Anchoring Strategies

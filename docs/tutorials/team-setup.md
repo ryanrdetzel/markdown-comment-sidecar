@@ -1,6 +1,6 @@
 ---
 title: Team Setup
-id: team-setup
+id: 40e55da19e696edc66ee0acdd3876edf
 ---
 
 # Team Setup

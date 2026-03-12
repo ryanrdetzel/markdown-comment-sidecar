@@ -1,6 +1,9 @@
 ---
 title: Getting Started
-id: getting-started
+id: ee6a9aa3e4cb501212e93e92f108921c
+author: Ryan Detzel
+date: 2025-01-15
+tags: [setup, quickstart]
 ---
 
 # Getting Started

@@ -1,6 +1,6 @@
 ---
 title: Migrate from GitHub Issues
-id: migrate-from-issues
+id: 82288bb161f89956ab1019f73b61b574
 ---
 
 # Migrate from GitHub Issues

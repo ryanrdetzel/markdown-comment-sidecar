@@ -59,9 +59,15 @@ Each document is stored as `data/<documentId>.json`:
 
 Each document gets a stable ID: `sha256(siteId + ':' + relativeFilePath).slice(0, 32)`
 
-Frontmatter can override this:
-- `id: my-slug` — scoped to the file's directory, then hashed with siteId
-- `id: 203c2041d628f30e008ce7c34f35c4e1` — 32-char hex used as-is (pins the ID, e.g. after a file rename)
+Frontmatter can override this with a pinned 32-char hex string:
+- `id: 203c2041d628f30e008ce7c34f35c4e1` — used as-is (pins the ID, e.g. after a file rename)
+
+**NEVER use plain word slugs** like `id: getting-started` or `id: my-page`. Slugs are guessable — an attacker who knows or can predict the slug and the siteId can compute the document ID and access its comments. Always use a random 32-char hex string generated with:
+```bash
+node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
+```
+
+Use `scripts/add-ids.js` to stamp hex IDs onto any markdown files that don't have one.
 
 In dev mode (`npm start`), document ID defaults to `'local'`.
 

@@ -1,6 +1,9 @@
 ---
 title: Deployment
-id: deployment
+id: b1af9bf424e34ba03d0e7a8ca42ab679
+author: Ryan Detzel
+date: 2025-02-10
+tags: [deployment, hosting]
 ---
 
 # Deployment

@@ -1,6 +1,6 @@
 ---
 title: VS Code Integration
-id: vscode
+id: dc861eecd1a9b6a7682337ab1f9287f9
 ---
 
 # VS Code Integration

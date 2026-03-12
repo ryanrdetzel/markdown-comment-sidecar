@@ -1,6 +1,6 @@
 ---
 title: How It Works
-id: how-it-works
+id: aac0469e32e148240fbd24a235824302
 ---
 
 # How It Works
@@ -31,15 +31,15 @@ documentId = sha256(siteId + ':' + relativeFilePath).slice(0, 32)
 
 The `siteId` is a secret you supply at build time with `--site-id`. It scopes all IDs to your deployment so two sites with the same file paths don't share comments.
 
-Frontmatter can override the derived ID:
+Frontmatter can override the derived ID with a pinned 32-character hex string:
 
 ```yaml
 ---
-id: my-custom-slug
+id: a3f1c9e08b2d47e6f001234567890abc
 ---
 ```
 
-A short slug is hashed with the site ID. A 32-character hex string is used as-is, which lets you pin an ID across file renames.
+A 32-character hex string is used as-is, which lets you pin an ID across file renames.
 
 In dev mode (`npm start`), all documents use the ID `local`.
 

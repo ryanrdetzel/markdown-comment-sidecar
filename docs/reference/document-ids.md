@@ -1,6 +1,6 @@
 ---
 title: Document IDs
-id: document-ids
+id: 8fca286e7550e18cb80f27dc590b476f
 ---
 
 # Document IDs
@@ -25,20 +25,7 @@ In dev mode (`npm start`), document ID is always `'local'` — all threads visib
 
 ## Frontmatter override
 
-Add an `id` field to a document's YAML frontmatter to control the ID explicitly.
-
-### Short slug
-
-```yaml
----
-title: Getting Started
-id: getting-started
----
-```
-
-Short slugs are hashed: `sha256(siteId + ':' + slug).slice(0, 32)`. This scopes the slug to your site, preventing collisions across sites that share a comment server.
-
-### Pinned hex ID
+Add an `id` field to a document's YAML frontmatter to pin the ID explicitly. The value must be a 32-character hex string:
 
 ```yaml
 ---
@@ -47,7 +34,9 @@ id: a3f1c9e08b2d47e6f001234567890abc
 ---
 ```
 
-A 32-character hex string is used as-is, bypassing the hash. Use this to pin a document's ID after renaming it — existing threads stay attached.
+A 32-character hex ID is used as-is, bypassing the hash. Use this to pin a document's ID after renaming it — existing threads stay attached.
+
+> **Always use hex IDs.** Plain word slugs like `id: getting-started` are guessable — anyone who knows or can guess the slug and your site ID can compute the document ID and access its comments. A random hex string is unguessable.
 
 ## Keeping IDs stable
 

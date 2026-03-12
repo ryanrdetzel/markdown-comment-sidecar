@@ -1832,6 +1832,36 @@ li.cmt-block-highlight::after {
   flex-shrink: 0;
 }
 
+.index-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.index-card__meta-author,
+.index-card__meta-date {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.index-card__meta-author::before {
+  content: "by ";
+}
+
+.index-card__meta-author + .index-card__meta-date::before {
+  content: "· ";
+}
+
+.index-card__tag {
+  font-size: 0.72rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text-muted);
+}
+
 /* ── Breadcrumbs ─────────────────────────────────────────────────────────── */
 
 .breadcrumbs {

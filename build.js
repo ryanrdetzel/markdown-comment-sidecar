@@ -68,7 +68,8 @@ function parseArgs() {
 
   // Normalize basePath: ensure leading slash, no trailing slash (e.g. "" or "/docs")
   if (result.basePath) {
-    result.basePath = '/' + result.basePath.replace(/^\//, '').replace(/\/$/, '');
+    result.basePath =
+      "/" + result.basePath.replace(/^\//, "").replace(/\/$/, "");
   }
 
   if (missing.length) {
@@ -103,24 +104,24 @@ function buildRecentButtonHtml() {
 
 // Escape </script> sequences so embedded content can't break out of a script tag.
 function escapeScriptContent(str) {
-  return str.replace(/<\/script/gi, '<\\/script');
+  return str.replace(/<\/script/gi, "<\\/script");
 }
 
 // Strip markdown syntax to get plain searchable text
 function extractPlainText(markdown) {
   return markdown
-    .replace(/^---[\s\S]*?^---\s*/m, '')        // frontmatter
-    .replace(/```[\s\S]*?```/g, '')               // code fences
-    .replace(/`[^`]+`/g, '')                      // inline code
-    .replace(/^#+\s+/gm, '')                      // heading markers
-    .replace(/\*\*([^*]+)\*\*/g, '$1')            // bold
-    .replace(/\*([^*]+)\*/g, '$1')                // italic
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')      // links
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')         // images
-    .replace(/^\s*[-*+]\s+/gm, '')                // list markers
-    .replace(/^\s*\d+\.\s+/gm, '')                // ordered list
-    .replace(/^\s*>/gm, '')                       // blockquotes
-    .replace(/\s+/g, ' ')
+    .replace(/^---[\s\S]*?^---\s*/m, "") // frontmatter
+    .replace(/```[\s\S]*?```/g, "") // code fences
+    .replace(/`[^`]+`/g, "") // inline code
+    .replace(/^#+\s+/gm, "") // heading markers
+    .replace(/\*\*([^*]+)\*\*/g, "$1") // bold
+    .replace(/\*([^*]+)\*/g, "$1") // italic
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // links
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, "") // images
+    .replace(/^\s*[-*+]\s+/gm, "") // list markers
+    .replace(/^\s*\d+\.\s+/gm, "") // ordered list
+    .replace(/^\s*>/gm, "") // blockquotes
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -137,11 +138,17 @@ function generateHtml({
   assets,
   hasExplicitId,
 }) {
-  const configJson = escapeScriptContent(JSON.stringify({ serverUrl, documentId, hasExplicitId }));
+  const configJson = escapeScriptContent(
+    JSON.stringify({ serverUrl, documentId, hasExplicitId }),
+  );
   const breadcrumbHtml = renderBreadcrumbs(breadcrumbs || []);
   // breadcrumbs includes "Index" as the first entry, so depth = length - 1
-  const logoHref = "../".repeat(breadcrumbs ? Math.max(0, breadcrumbs.length - 1) : 0) + "index.html";
-  const logoHtml = logo ? `<span class="site-logo"><a href="${escapeHtml(logoHref)}">${escapeHtml(logo)}</a></span>` : "";
+  const logoHref =
+    "../".repeat(breadcrumbs ? Math.max(0, breadcrumbs.length - 1) : 0) +
+    "index.html";
+  const logoHtml = logo
+    ? `<span class="site-logo"><a href="${escapeHtml(logoHref)}">${escapeHtml(logo)}</a></span>`
+    : "";
   const assetsBase = basePath || "";
   const cssFile = (assets && assets["sidecar.css"]) || "sidecar.css";
   const themeFile = (assets && assets["theme.css"]) || "theme.css";
@@ -234,26 +241,30 @@ function extractDescription(content) {
   let paragraph = [];
 
   for (const line of lines) {
-    if (line.startsWith("```")) { inCode = !inCode; continue; }
+    if (line.startsWith("```")) {
+      inCode = !inCode;
+      continue;
+    }
     if (inCode) continue;
-    if (/^#+\s/.test(line)) continue;    // headings
-    if (/^---/.test(line)) continue;     // frontmatter delimiter
+    if (/^#+\s/.test(line)) continue; // headings
+    if (/^---/.test(line)) continue; // frontmatter delimiter
     if (/^\s*$/.test(line)) {
-      if (paragraph.length > 0) break;   // end of first paragraph
+      if (paragraph.length > 0) break; // end of first paragraph
       continue;
     }
     paragraph.push(line.trim());
   }
 
-  const text = paragraph.join(" ").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim();
+  const text = paragraph
+    .join(" ")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .trim();
   return text.length > 160 ? text.slice(0, 157) + "…" : text;
 }
 
 // Convert a directory name (slug) to a human-readable title
 function slugToTitle(slug) {
-  return slug
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return slug.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // Build breadcrumb segments from outputDir to the parent of currentPath.
@@ -265,7 +276,7 @@ function slugToTitle(slug) {
 // Returns [] only for the root index itself.
 function buildBreadcrumbs(outputDir, currentPath) {
   const rel = path.relative(outputDir, currentPath);
-  if (!rel || rel === 'index.html') return [];
+  if (!rel || rel === "index.html") return [];
 
   const parts = rel.split(path.sep).filter(Boolean);
   // Pop the last segment (filename or dir name) — we only want ancestors
@@ -277,7 +288,8 @@ function buildBreadcrumbs(outputDir, currentPath) {
     const remaining = depth - 1 - i;
     crumbs.push({
       label: slugToTitle(parts[i]),
-      href: remaining > 0 ? "../".repeat(remaining) + "index.html" : "index.html",
+      href:
+        remaining > 0 ? "../".repeat(remaining) + "index.html" : "index.html",
     });
   }
   return crumbs;
@@ -288,14 +300,29 @@ function renderBreadcrumbs(crumbs, selfHref) {
   const items = crumbs.map((c) =>
     c.href === selfHref
       ? `<span>${escapeHtml(c.label)}</span>`
-      : `<a href="${escapeHtml(c.href)}">${escapeHtml(c.label)}</a>`
+      : `<a href="${escapeHtml(c.href)}">${escapeHtml(c.label)}</a>`,
   );
-  return `<nav class="breadcrumbs">${items.join(" <span class=\"breadcrumb-sep\">/</span> ")}</nav>`;
+  return `<nav class="breadcrumbs">${items.join(' <span class="breadcrumb-sep">/</span> ')}</nav>`;
+}
+
+// Parse YAML-style tags: "[foo, bar]" or "foo, bar" → ["foo", "bar"]
+function parseTags(raw) {
+  if (!raw) return [];
+  const s = raw.trim().replace(/^\[/, '').replace(/\]$/, '');
+  return s.split(',').map(t => t.trim()).filter(Boolean);
 }
 
 // ─── Index page ───────────────────────────────────────────────────────────────
 
-function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, searchIndexUrl, assets }) {
+function generateIndexHtml({
+  title,
+  entries,
+  basePath,
+  breadcrumbs,
+  logo,
+  searchIndexUrl,
+  assets,
+}) {
   const assetsBase = basePath || "";
   const cssFile = (assets && assets["sidecar.css"]) || "sidecar.css";
   const themeFile = (assets && assets["theme.css"]) || "theme.css";
@@ -304,27 +331,50 @@ function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, search
   const iconFolder = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
   const iconFile = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
 
-  const dirCards = entries.filter((e) => e.type === "dir").map((e) => `
+  const dirCards = entries
+    .filter((e) => e.type === "dir")
+    .map(
+      (e) => `
         <a class="index-card index-card--dir" href="${escapeHtml(e.href)}">
           <div class="index-card__icon">${iconFolder}</div>
           <div class="index-card__body">
             <div class="index-card__title">${escapeHtml(e.label)}</div>
           </div>
           <div class="index-card__arrow">&#x2192;</div>
-        </a>`).join("");
+        </a>`,
+    )
+    .join("");
 
-  const fileCards = entries.filter((e) => e.type === "file").map((e) => `
+  const fileCards = entries
+    .filter((e) => e.type === "file")
+    .map((e) => {
+      const descHtml = e.description
+        ? `<div class="index-card__desc">${escapeHtml(e.description)}</div>`
+        : '';
+      const metaParts = [];
+      if (e.author) metaParts.push(`<span class="index-card__meta-author">${escapeHtml(e.author)}</span>`);
+      if (e.date) metaParts.push(`<span class="index-card__meta-date">${escapeHtml(e.date)}</span>`);
+      else if (e.updated) metaParts.push(`<span class="index-card__meta-date">Updated ${escapeHtml(e.updated)}</span>`);
+      if (e.tags && e.tags.length) metaParts.push(e.tags.map(t => `<span class="index-card__tag">${escapeHtml(t)}</span>`).join(''));
+      const metaHtml = metaParts.length ? `<div class="index-card__meta">${metaParts.join('')}</div>` : '';
+      return `
         <a class="index-card index-card--file" href="${escapeHtml(e.href)}">
           <div class="index-card__icon">${iconFile}</div>
           <div class="index-card__body">
             <div class="index-card__title">${escapeHtml(e.label)}</div>
+            ${descHtml}${metaHtml}
           </div>
           <div class="index-card__arrow">&#x2192;</div>
-        </a>`).join("");
+        </a>`;
+    })
+    .join("");
 
   const breadcrumbHtml = renderBreadcrumbs(breadcrumbs, "index.html");
-  const indexLogoHref = "../".repeat(breadcrumbs ? breadcrumbs.length : 0) + "index.html";
-  const logoHtml = logo ? `<span class="site-logo"><a href="${escapeHtml(indexLogoHref)}">${escapeHtml(logo)}</a></span>` : "";
+  const indexLogoHref =
+    "../".repeat(breadcrumbs ? breadcrumbs.length : 0) + "index.html";
+  const logoHtml = logo
+    ? `<span class="site-logo"><a href="${escapeHtml(indexLogoHref)}">${escapeHtml(logo)}</a></span>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -362,15 +412,15 @@ function generateIndexHtml({ title, entries, basePath, breadcrumbs, logo, search
 }
 
 function generateIndexPages(outputDir, builtFiles, basePath, logo, assets) {
-  // Map from dirPath → [{ name, title, description }]
+  // Map from dirPath → [{ name, title, description, author, date, updated, tags }]
   const dirFiles = new Map();
 
-  for (const { outPath, title, description } of builtFiles) {
+  for (const { outPath, title, description, author, date, updated, tags } of builtFiles) {
     const dir = path.dirname(outPath);
     const name = path.basename(outPath);
     if (name === "index.html") continue;
     if (!dirFiles.has(dir)) dirFiles.set(dir, []);
-    dirFiles.get(dir).push({ name, title, description });
+    dirFiles.get(dir).push({ name, title, description, author, date, updated, tags });
   }
 
   // Collect all directories that contain built files, plus their ancestors
@@ -407,22 +457,41 @@ function generateIndexPages(outputDir, builtFiles, basePath, logo, assets) {
         label: slugToTitle(name),
         description,
       })),
-      ...files.map(({ name, title, description }) => ({
+      ...files.map(({ name, title, description, author, date, updated, tags }) => ({
         type: "file",
         href: name,
         label: title,
         description,
+        author,
+        date,
+        updated,
+        tags,
       })),
     ];
 
     const isRoot = dirPath === outputDir;
-    const dirName = isRoot ? "Documentation" : slugToTitle(path.basename(dirPath));
-    const breadcrumbs = buildBreadcrumbs(outputDir, path.join(dirPath, 'index.html'));
+    const dirName = isRoot ? "Home" : slugToTitle(path.basename(dirPath));
+    const breadcrumbs = buildBreadcrumbs(
+      outputDir,
+      path.join(dirPath, "index.html"),
+    );
 
-    const idepth = path.relative(outputDir, dirPath).split(path.sep).filter(Boolean).length;
-    const searchIndexUrl = (idepth > 0 ? "../".repeat(idepth) : "") + "search-index.json";
+    const idepth = path
+      .relative(outputDir, dirPath)
+      .split(path.sep)
+      .filter(Boolean).length;
+    const searchIndexUrl =
+      (idepth > 0 ? "../".repeat(idepth) : "") + "search-index.json";
 
-    const indexHtml = generateIndexHtml({ title: dirName, entries, basePath, breadcrumbs, logo, searchIndexUrl, assets });
+    const indexHtml = generateIndexHtml({
+      title: dirName,
+      entries,
+      basePath,
+      breadcrumbs,
+      logo,
+      searchIndexUrl,
+      assets,
+    });
     fs.writeFileSync(indexPath, indexHtml);
 
     const relOut = path.relative(process.cwd(), indexPath);
@@ -436,7 +505,8 @@ function buildFile(filePath, opts) {
   if (!filePath.endsWith(".md")) {
     return null;
   }
-  const { inputDir, outputDir, serverUrl, siteId, basePath, logo, assets } = opts;
+  const { inputDir, outputDir, serverUrl, siteId, basePath, logo, assets } =
+    opts;
   const raw = fs.readFileSync(filePath, "utf8");
   const { data, content } = parseFrontmatter(raw);
 
@@ -446,7 +516,7 @@ function buildFile(filePath, opts) {
     siteId,
     data.id || null,
   );
-  const hasExplicitId = !!(data.id);
+  const hasExplicitId = !!data.id;
   const html = marked.parse(content);
 
   // Title: frontmatter title, first H1 in markdown, or filename
@@ -457,6 +527,10 @@ function buildFile(filePath, opts) {
   }
 
   const description = data.description || extractDescription(content);
+  const author = data.author || null;
+  const date = data.date || null;
+  const updated = data.updated || null;
+  const tags = parseTags(data.tags);
 
   // Output path mirrors input directory structure, .md → .html
   const rel = path.relative(path.resolve(inputDir), filePath);
@@ -464,8 +538,12 @@ function buildFile(filePath, opts) {
 
   const breadcrumbs = buildBreadcrumbs(outputDir, outPath);
 
-  const depth = path.relative(outputDir, path.dirname(outPath)).split(path.sep).filter(Boolean).length;
-  const searchIndexUrl = (depth > 0 ? "../".repeat(depth) : "") + "search-index.json";
+  const depth = path
+    .relative(outputDir, path.dirname(outPath))
+    .split(path.sep)
+    .filter(Boolean).length;
+  const searchIndexUrl =
+    (depth > 0 ? "../".repeat(depth) : "") + "search-index.json";
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(
@@ -486,7 +564,7 @@ function buildFile(filePath, opts) {
   );
 
   const plainText = extractPlainText(content).slice(0, 5000);
-  return { filePath, outPath, documentId, title, description, plainText };
+  return { filePath, outPath, documentId, title, description, author, date, updated, tags, plainText };
 }
 
 function build(args) {
@@ -510,8 +588,14 @@ function build(args) {
   console.log(`Building ${files.length} file(s)...`);
 
   // Copy static assets into output with content-hashed filenames for cache busting
-  const staticAssets = ['app.js', 'recent.js', 'search.js', 'sidecar.css', 'theme.css'];
-  const publicDir = path.join(__dirname, 'public');
+  const staticAssets = [
+    "app.js",
+    "recent.js",
+    "search.js",
+    "sidecar.css",
+    "theme.css",
+  ];
+  const publicDir = path.join(__dirname, "public");
   const assets = {};
   for (const asset of staticAssets) {
     const src = path.join(publicDir, asset);
@@ -520,11 +604,21 @@ function build(args) {
       const destName = hashedAssetName(asset, hash);
       fs.copyFileSync(src, path.join(outputDir, destName));
       assets[asset] = destName;
-      console.log(`  [asset]  → ${path.relative(process.cwd(), path.join(outputDir, destName))}`);
+      console.log(
+        `  [asset]  → ${path.relative(process.cwd(), path.join(outputDir, destName))}`,
+      );
     }
   }
 
-  const opts = { inputDir, outputDir, serverUrl: server, siteId, basePath, logo, assets };
+  const opts = {
+    inputDir,
+    outputDir,
+    serverUrl: server,
+    siteId,
+    basePath,
+    logo,
+    assets,
+  };
   const built = [];
   for (const f of files) {
     const result = buildFile(f, opts);
@@ -539,17 +633,24 @@ function build(args) {
   generateIndexPages(outputDir, built, basePath, logo, assets);
 
   // Generate search index
-  const searchIndex = built.map(({ outPath, title, description, plainText }) => ({
-    title,
-    description: description || '',
-    content: plainText || '',
-    url: basePath + '/' + path.relative(outputDir, outPath).split(path.sep).join('/'),
-  }));
+  const searchIndex = built.map(
+    ({ outPath, title, description, plainText }) => ({
+      title,
+      description: description || "",
+      content: plainText || "",
+      url:
+        basePath +
+        "/" +
+        path.relative(outputDir, outPath).split(path.sep).join("/"),
+    }),
+  );
   fs.writeFileSync(
-    path.join(outputDir, 'search-index.json'),
+    path.join(outputDir, "search-index.json"),
     JSON.stringify(searchIndex),
   );
-  console.log(`  [search] → ${path.relative(process.cwd(), path.join(outputDir, 'search-index.json'))} (${searchIndex.length} entries)`);
+  console.log(
+    `  [search] → ${path.relative(process.cwd(), path.join(outputDir, "search-index.json"))} (${searchIndex.length} entries)`,
+  );
 
   console.log(`\nDone. Output: ${outputDir}`);
   console.log(
