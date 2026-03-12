@@ -407,25 +407,34 @@ header {
 .no-id-warning {
   max-width: 680px;
   margin: 0 auto 20px;
-  padding: 10px 14px;
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
-  border-left: 4px solid #f59e0b;
-  border-radius: 6px;
-  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--accent-light);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-size: 12px;
   line-height: 1.5;
-  color: #78350f;
+  color: var(--text-muted);
 }
 
 .no-id-warning strong {
   display: inline;
   font-weight: 600;
+  color: var(--accent-text);
+}
+
+.no-id-warning a {
+  color: var(--accent);
+}
+
+.no-id-warning a:hover {
+  color: var(--accent-hover);
 }
 
 .no-id-warning code {
   font-family: monospace;
-  font-size: 12px;
-  background: rgba(245, 158, 11, 0.15);
+  font-size: 11px;
+  background: var(--doc-bg);
   padding: 1px 4px;
   border-radius: 3px;
 }
