@@ -1373,7 +1373,7 @@ function renderNoIdWarning() {
       banner.className = 'no-id-warning';
 
       const heading = document.createElement('strong');
-      heading.textContent = '⚠ No stable document ID';
+      heading.textContent = 'ⓘ No stable document ID';
       banner.appendChild(heading);
 
       banner.appendChild(document.createTextNode(' This file does not have an '));
