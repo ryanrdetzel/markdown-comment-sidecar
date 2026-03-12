@@ -885,6 +885,37 @@ li.cmt-block-highlight::after {
   padding: 40px 20px;
 }
 
+.signin-prompt {
+  text-align: center;
+  padding: 32px 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 16px;
+  background: var(--bg-secondary, #f9fafb);
+}
+
+.signin-prompt p {
+  margin: 0 0 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.signin-prompt a.signin-cta {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signin-prompt a.signin-cta:hover {
+  opacity: 0.9;
+}
+
 /* Thread list card extras */
 .reply-count {
   background: var(--accent-light);

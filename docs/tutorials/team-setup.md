@@ -13,7 +13,7 @@ This tutorial walks through setting up markdown-comment-sidecar for a team — s
                   ┌──────────────────────┐
                   │   Comment Server     │
                   │   (always running)   │
-                  │   + comments.db      │
+                  │   + data/ (JSON)     │
                   └──────────┬───────────┘
                              │ API calls at runtime
               ┌──────────────┴──────────────┐
@@ -32,7 +32,7 @@ Pick a host and deploy. See the [Self-Hosting guide](../guides/self-hosting.html
 
 You'll need:
 - HTTPS (required for browsers to load comments from a static `https://` page)
-- Persistent disk for `comments.db`
+- Persistent disk for the `data/` directory
 - `ALLOWED_ORIGINS` set to your docs URL
 
 Example environment:

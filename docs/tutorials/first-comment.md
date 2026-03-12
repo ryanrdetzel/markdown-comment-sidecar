@@ -63,7 +63,7 @@ Click **Resolved** in the sidebar tab bar to see it. You can click a resolved th
 
 ## What just happened
 
-Behind the scenes, the comment was stored in `comments.db` as:
+Behind the scenes, the comment was stored in `data/local.json` as:
 
 ```json
 {

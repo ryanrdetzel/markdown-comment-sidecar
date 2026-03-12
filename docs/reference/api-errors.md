@@ -93,9 +93,9 @@ Returned when an unexpected error occurs on the server, usually a database error
 
 Check the server logs for the underlying exception. Common causes:
 
-- `comments.db` is read-only (permissions issue)
-- Disk full — SQLite can't write
-- Concurrent write contention (rare with SQLite WAL mode)
+- `data/` directory is read-only (permissions issue)
+- Disk full — cannot write JSON files
+- File system errors (corrupted JSON, missing directory)
 
 ---
 

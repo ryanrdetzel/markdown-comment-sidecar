@@ -34,12 +34,12 @@ docker run -d \
   --name comment-server \
   -p 3000:3000 \
   -v /data/comments:/data \
-  -e DB_PATH=/data/comments.db \
-  -e CORS_ORIGIN=https://docs.example.com \
+  -e DATA_DIR=/data \
+  -e ALLOWED_ORIGINS=https://docs.example.com \
   comment-server
 ```
 
-The `-v` flag mounts a host directory so the database file persists across container restarts.
+The `-v` flag mounts a host directory so comment data persists across container restarts.
 
 ## Docker Compose
 
@@ -56,8 +56,8 @@ services:
     volumes:
       - comments-data:/data
     environment:
-      DB_PATH: /data/comments.db
-      CORS_ORIGIN: https://docs.example.com
+      DATA_DIR: /data
+      ALLOWED_ORIGINS: https://docs.example.com
 
 volumes:
   comments-data:

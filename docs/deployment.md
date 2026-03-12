@@ -20,7 +20,7 @@ The server is deployed using Docker behind a Caddy reverse proxy. See the [detz.
 
 ### Environment
 
-The server needs no special environment variables. It creates `comments.db` in the working directory on first run.
+The server needs no special environment variables. It creates a `data/` directory in the working directory on first run.
 
 ```bash
 # Install and start

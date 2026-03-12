@@ -12,13 +12,13 @@ The comment server reads these environment variables at startup.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3000` | Port the Express server listens on |
-| `DB_PATH` | `./comments.db` | Path to the SQLite database file |
-| `CORS_ORIGIN` | `*` | Allowed CORS origin (set to your site's domain in production) |
+| `DATA_DIR` | `./data` | Directory where JSON comment files are stored |
+| `ALLOWED_ORIGINS` | `*` | Allowed CORS origin (set to your site's domain in production) |
 
 ### Example
 
 ```bash
-PORT=8080 DB_PATH=/data/comments.db CORS_ORIGIN=https://docs.example.com node server.js
+PORT=8080 DATA_DIR=/data ALLOWED_ORIGINS=https://docs.example.com node server.js
 ```
 
 ---

@@ -5,31 +5,37 @@ id: data-model
 
 # Data Model
 
-markdown-comment-sidecar stores all comment data in a SQLite database (`comments.db`). There are two tables: `threads` and `messages`.
+markdown-comment-sidecar stores all comment data as JSON files in the `data/` directory. Each document gets its own file: `data/<documentId>.json`.
 
 ## Schema
 
-```sql
-CREATE TABLE threads (
-  id                   TEXT PRIMARY KEY,
-  document_id          TEXT NOT NULL,
-  anchor_element_type  TEXT,
-  anchor_element_index INT,
-  anchor_element_text  TEXT,
-  anchor_selected_text TEXT,
-  resolved             INT  DEFAULT 0,
-  resolved_at          TEXT,
-  resolved_comment     TEXT,
-  created_at           TEXT
-);
-
-CREATE TABLE messages (
-  id         TEXT PRIMARY KEY,
-  thread_id  TEXT REFERENCES threads(id) ON DELETE CASCADE,
-  text       TEXT,
-  author     TEXT,
-  created_at TEXT
-);
+```json
+{
+  "threads": [
+    {
+      "id": "uuid",
+      "document_id": "32-char-hex",
+      "anchor_element_type": "p",
+      "anchor_element_index": 2,
+      "anchor_element_text": "Text snapshot of the anchored element",
+      "anchor_selected_text": "The highlighted passage",
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedComment": null,
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "messages": [
+        {
+          "id": "uuid",
+          "thread_id": "uuid",
+          "text": "Message body",
+          "author": "Display name",
+          "author_id": "oauth-sub",
+          "created_at": "2024-01-01T00:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}
 ```
 
 ---
@@ -98,26 +104,15 @@ ISO 8601 timestamp string. Set server-side at insert time.
 
 ---
 
-## Indexes
-
-`document_id` is not indexed by default. For large deployments with many documents, add:
-
-```sql
-CREATE INDEX idx_threads_document_id ON threads(document_id);
-```
-
----
-
-## Inspecting the database
+## Inspecting the data
 
 ```bash
-# List all threads for a document
-sqlite3 comments.db \
-  "SELECT id, anchor_element_type, anchor_element_index, resolved FROM threads WHERE document_id='<id>';"
+# Pretty-print all threads for a document
+cat data/<document-id>.json | python3 -m json.tool
 
-# Show full thread with messages
-sqlite3 comments.db \
-  "SELECT t.id, t.anchor_selected_text, m.author, m.text
-   FROM threads t JOIN messages m ON m.thread_id = t.id
-   WHERE t.id='<thread-id>';"
+# List thread IDs and selected text with jq
+jq '.threads[] | {id, anchor_selected_text, resolved}' data/<document-id>.json
+
+# Show all messages in a specific thread
+jq '.threads[] | select(.id == "<thread-id>") | .messages' data/<document-id>.json
 ```

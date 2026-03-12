@@ -2,7 +2,7 @@
 
 ## What this is
 
-A proof-of-concept for annotating markdown files with threaded comments without modifying the source file. Comments are stored in a SQLite database (`comments.db`) and anchored to document elements (headings, paragraphs) rather than character offsets.
+A proof-of-concept for annotating markdown files with threaded comments without modifying the source file. Comments are stored in JSON files in the `data/` directory and anchored to document elements (headings, paragraphs) rather than character offsets.
 
 ## Stack
 
@@ -10,7 +10,7 @@ A proof-of-concept for annotating markdown files with threaded comments without 
 - **Rendering**: `marked` converts markdown to HTML server-side
 - **Anchoring**: Element-based (type + index + text snapshot), not text-offset fuzzy matching
 - **Frontend**: Vanilla JS + HTML/CSS, no framework, no bundler
-- **Storage**: `better-sqlite3` — `comments.db` flat file
+- **Storage**: JSON files in `data/<documentId>.json` via `lib/sidecar-store.js`
 - **Build**: `build.js` generates static HTML from a `docs/` directory
 
 Run with `npm start` — server on port 3000.
@@ -26,34 +26,33 @@ public/
 sample.md          — The document used in dev mode
 docs/              — Source markdown files for the build
 dist/              — Build output (gitignored)
-comments.db        — Thread storage (gitignored)
+data/              — JSON comment files (gitignored)
 ```
 
 ## Data model
 
-Threads in `comments.db`:
+Each document is stored as `data/<documentId>.json`:
 
-```sql
-threads (
-  id TEXT PRIMARY KEY,
-  document_id TEXT NOT NULL,
-  anchor_element_type TEXT,   -- 'h1', 'p', etc.
-  anchor_element_index INT,   -- nth element of that type in the document
-  anchor_element_text TEXT,   -- text snapshot for drift detection
-  anchor_selected_text TEXT,  -- the highlighted selection
-  resolved INT DEFAULT 0,
-  resolved_at TEXT,
-  resolved_comment TEXT,
-  created_at TEXT
-)
-
-messages (
-  id TEXT PRIMARY KEY,
-  thread_id TEXT REFERENCES threads(id) ON DELETE CASCADE,
-  text TEXT,
-  author TEXT,
-  created_at TEXT
-)
+```json
+{
+  "threads": [
+    {
+      "id": "uuid",
+      "document_id": "32-char-hex",
+      "anchor_element_type": "p",
+      "anchor_element_index": 2,
+      "anchor_element_text": "text snapshot for drift detection",
+      "anchor_selected_text": "the highlighted selection",
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedComment": null,
+      "created_at": "ISO8601",
+      "messages": [
+        { "id": "uuid", "thread_id": "uuid", "text": "...", "author": "...", "author_id": "...", "created_at": "ISO8601" }
+      ]
+    }
+  ]
+}
 ```
 
 ## Document IDs
@@ -125,5 +124,5 @@ state = {
 ## Known limitations (POC scope)
 
 - No auth — document ID is the only gate; anyone who knows it can read/write comments
-- No multi-user locking on `comments.db`
+- No multi-user locking on the JSON files
 - No persistence beyond the flat file

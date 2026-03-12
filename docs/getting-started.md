@@ -81,7 +81,7 @@ sample.md          — Document shown in dev mode (npm start)
 docs/              — Markdown source for this documentation site
 lib/
   document-id.js   — Document ID derivation and frontmatter parsing
-comments.db        — Created at runtime, gitignored
+data/              — JSON comment files, created at runtime, gitignored
 ```
 
 ## npm scripts

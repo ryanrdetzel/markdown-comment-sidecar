@@ -45,29 +45,28 @@ In dev mode (`npm start`), all documents use the ID `local`.
 
 ## Data model
 
-Two tables in `comments.db`:
+Each document's data is stored in `data/<documentId>.json`:
 
-```sql
-threads (
-  id TEXT PRIMARY KEY,
-  document_id TEXT NOT NULL,
-  anchor_element_type TEXT,   -- 'h1', 'p', etc.
-  anchor_element_index INT,   -- nth element of that type
-  anchor_element_text TEXT,   -- text snapshot for drift detection
-  anchor_selected_text TEXT,  -- the highlighted passage
-  resolved INT DEFAULT 0,
-  resolved_at TEXT,
-  resolved_comment TEXT,
-  created_at TEXT
-)
-
-messages (
-  id TEXT PRIMARY KEY,
-  thread_id TEXT REFERENCES threads(id) ON DELETE CASCADE,
-  text TEXT,
-  author TEXT,
-  created_at TEXT
-)
+```json
+{
+  "threads": [
+    {
+      "id": "uuid",
+      "document_id": "32-char-hex",
+      "anchor_element_type": "p",   // 'h1', 'p', etc.
+      "anchor_element_index": 2,    // nth element of that type
+      "anchor_element_text": "...", // text snapshot for drift detection
+      "anchor_selected_text": "...",// the highlighted passage
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedComment": null,
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "messages": [
+        { "id": "uuid", "text": "...", "author": "...", "created_at": "..." }
+      ]
+    }
+  ]
+}
 ```
 
 Each thread has one or more messages. The first message is the original comment. Subsequent messages are replies.

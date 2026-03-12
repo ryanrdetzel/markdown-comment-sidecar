@@ -402,11 +402,18 @@ function renderThreadList() {
   const existingForm = commentsList.querySelector('.new-comment-form');
 
   if (shown.length === 0) {
-    commentsList.innerHTML = `<div class="empty-state">${
-      state.sidebarTab === 'resolved'
-        ? 'No resolved threads yet.'
-        : 'Select text in the document to add a comment.'
-    }</div>`;
+    if (state.sidebarTab !== 'resolved' && !currentUser) {
+      const isHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+      const returnTo = isHttp ? encodeURIComponent(window.location.origin + window.location.pathname + window.location.search) : null;
+      const signInUrl = apiUrl('/auth/google') + (returnTo ? `?return_to=${returnTo}` : '');
+      commentsList.innerHTML = `<div class="signin-prompt"><p>Sign in to add comments</p><a href="${signInUrl}" class="signin-cta">Sign in with Google</a></div>`;
+    } else {
+      commentsList.innerHTML = `<div class="empty-state">${
+        state.sidebarTab === 'resolved'
+          ? 'No resolved threads yet.'
+          : 'Select text in the document to add a comment.'
+      }</div>`;
+    }
     if (existingForm) {
       commentsList.innerHTML = '';
       commentsList.appendChild(existingForm);

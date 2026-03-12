@@ -13,14 +13,14 @@ The comment server is a plain Node.js/Express app. It:
 
 - Serves the comment API (`/api/*`)
 - Serves static assets (`sidecar.css`, `app.js`) for the built docs
-- Writes `comments.db` to disk
+- Writes JSON comment files to the `data/` directory
 
 Your static docs (the `dist/` output) can be hosted anywhere — GitHub Pages, S3, Netlify, Cloudflare Pages. Only the comment server needs to be running continuously.
 
 ## Requirements
 
 - Node.js 18+
-- Persistent disk for `comments.db`
+- Persistent disk for the `data/` directory
 - HTTPS (browsers block mixed-content requests from `https://` pages to `http://` comment servers)
 
 ---
@@ -79,7 +79,7 @@ docker run -d \
 
 1. Fork or clone the repo, push to GitHub
 2. Create a new Railway project from your GitHub repo
-3. Add a **Volume** mounted at `/app` (so `comments.db` survives deploys)
+3. Add a **Volume** mounted at `/app/data` (so comment data survives deploys)
 4. Set the environment variable `ALLOWED_ORIGINS` to your docs URL
 5. Railway auto-detects `npm start` from `package.json`
 
@@ -92,7 +92,7 @@ Railway provides a `*.railway.app` domain with HTTPS automatically.
 1. Create a new **Web Service** from your GitHub repo
 2. Build command: `npm install`
 3. Start command: `node server.js`
-4. Add a **Disk** mounted at `/opt/render/project/src` (where `comments.db` is written)
+4. Add a **Disk** mounted at `/opt/render/project/src/data` (where JSON files are written)
 5. Set environment variable `ALLOWED_ORIGINS`
 
 ---
@@ -103,7 +103,7 @@ Railway provides a `*.railway.app` domain with HTTPS automatically.
 |---|---|---|
 | `PORT` | `3000` | Port the server listens on |
 | `ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins. Required in production. |
-| `DATA_DIR` | `.` | Directory where `comments.db` is written |
+| `DATA_DIR` | `./data` | Directory where JSON comment files are written |
 
 Example:
 

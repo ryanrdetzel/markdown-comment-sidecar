@@ -17,7 +17,7 @@ markdown-comment-sidecar lets readers highlight *any* text and attach a threaded
 
 ### Does it modify my markdown files?
 
-No. Your source files are never touched. All comment data lives in a separate SQLite database (`comments.db`) on the comment server.
+No. Your source files are never touched. All comment data lives in JSON files in the `data/` directory on the comment server.
 
 ### Is it production-ready?
 
@@ -40,7 +40,7 @@ The server stores comments against any `documentId` string. The rendering pipeli
 - Node.js 18 or later
 - npm
 
-No database server. No framework. SQLite runs in-process via `better-sqlite3`.
+No database server. No external dependencies beyond Node.js itself.
 
 ### How do I generate a site ID?
 
@@ -75,11 +75,14 @@ By default, anyone who can reach the comment server. There is no auth layer in t
 
 ### Can I export comments?
 
-The `comments.db` file is a standard SQLite database. Use any SQLite client to export threads and messages:
+Each document's comments are stored as a JSON file in the `data/` directory. Copy the files directly or extract specific fields with `jq`:
 
 ```bash
-sqlite3 comments.db ".headers on" ".mode csv" "SELECT * FROM threads;" > threads.csv
-sqlite3 comments.db ".headers on" ".mode csv" "SELECT * FROM messages;" > messages.csv
+# Pretty-print all threads for a document
+cat data/<document-id>.json | python3 -m json.tool
+
+# Extract thread IDs and selected text with jq
+jq -r '.threads[] | [.id, .anchor_selected_text] | @csv' data/<document-id>.json
 ```
 
 ### Can I delete a comment thread?
@@ -100,8 +103,4 @@ Yes. See the [GitHub Pages guide](guides/github-pages.html).
 
 ### Does the comment server need a persistent disk?
 
-Yes — `comments.db` must survive restarts. On container platforms, mount a persistent volume at the path where `comments.db` is written. On Railway, Render, or Fly.io, use a volume attachment. On a plain VPS, the file is already persistent.
-
-### Can I use a hosted database instead of SQLite?
-
-Not without code changes. The server uses `better-sqlite3` throughout. Migrating to Postgres would require swapping the query layer in `server.js`.
+Yes — the `data/` directory must survive restarts. On container platforms, mount a persistent volume at the path where `DATA_DIR` points. On Railway, Render, or Fly.io, use a volume attachment. On a plain VPS, the directory is already persistent.

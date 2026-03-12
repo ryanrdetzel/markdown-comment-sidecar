@@ -12,7 +12,7 @@ This is a manual process — there's no automated migration script. This tutoria
 ## Before you start
 
 You'll need:
-- The comment server running and `comments.db` initialized
+- The comment server running and the `data/` directory initialized
 - The docs built with a stable site ID
 - The `documentId` for each page you're migrating
 
